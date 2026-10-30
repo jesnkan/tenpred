@@ -201,6 +201,7 @@ try:
     from src.evaluation.risk_manager import TennisRiskManager
     from src.live.daily_runner import DailyRunner
     from src.live.predictor import TennisPredictionPipeline
+    from src.live.results_tracker import TennisResultsTracker
     from src.models.markov_sim import TennisMarkovModel
     from src.models.match_winner import MatchWinnerModel
     from src.ratings.surface_elo import SurfaceElo
@@ -211,6 +212,7 @@ except (ImportError, ModuleNotFoundError):
     from src.evaluation.risk_manager import TennisRiskManager
     from src.live.daily_runner import DailyRunner
     from src.live.predictor import TennisPredictionPipeline
+    from src.live.results_tracker import TennisResultsTracker
     from src.models.markov_sim import TennisMarkovModel
     from src.models.match_winner import MatchWinnerModel
     from src.ratings.surface_elo import SurfaceElo
@@ -485,17 +487,36 @@ tab_today, tab_sim, tab_elo, tab_model, tab_risk = st.tabs([
 
 
 # =============================================================================
-# TAB 1: TODAY'S MATCHES & TOP PICKS
+# TAB 1: TODAY'S MATCHES, LIVE RESULTS & TOP PICKS
 # =============================================================================
 
 with tab_today:
-    st.subheader("Today's Scheduled Matches & High-Confidence Selections")
-    st.markdown("Live scan of active ATP & WTA tournament fixtures evaluated through the calibrated Dual Ensemble and Markov engine.")
+    st.subheader("Live Results Tracker & Daily Value Screener")
+    st.markdown("Real-time settlement engine auditing model predictions against official ESPN tournament scores. Ticks **✅ CASHED** when predictions win and **❌ LOST** when predictions lose.")
 
-    # Refresh Button
-    c_btn1, c_btn2 = st.columns([2, 4])
+    # Top Control Buttons: Sync ESPN Live Matches & Sync Results
+    c_btn1, c_btn2 = st.columns([3, 3])
     with c_btn1:
-        if st.button("🔄 Refresh Live ESPN Match Board", type="primary", use_container_width=True):
+        if st.button("🔄 Sync Live ESPN Match Results & Ticks", type="primary", use_container_width=True):
+            with st.spinner("Querying ESPN live scoreboards, grading predictions, and settling outcomes..."):
+                tracker = TennisResultsTracker()
+                live_file = Path("data/live/predictions_20261030.csv")
+                if not live_file.exists():
+                    files = sorted(Path("data/live").glob("predictions_*.csv"))
+                    live_file = files[-1] if files else Path("data/live/predictions_20261030.csv")
+
+                df_ledger, summary = tracker.get_live_results_ledger(
+                    predictions_file=live_file,
+                    pipeline=pipeline,
+                    include_recent_finals=True,
+                    max_recent_finals=15,
+                    output_file="data/live/settled_predictions.csv",
+                )
+                st.success(f"Synced {len(df_ledger)} matches! {summary.get('cashed_bets', 0)} Cashed, {summary.get('lost_bets', 0)} Lost, {summary.get('pending_bets', 0)} Upcoming.")
+                st.rerun()
+
+    with c_btn2:
+        if st.button("📡 Re-Scrape Daily Fixtures from ESPN", use_container_width=True):
             with st.spinner("Fetching latest live scheduled fixtures and running ensemble scoring..."):
                 fetcher = TennisLiveFetcher()
                 live_df = fetcher.fetch_espn_daily_fixtures(tour="both", only_scheduled=True)
@@ -508,37 +529,114 @@ with tab_today:
                 else:
                     st.warning("No new matches found currently on ESPN live board.")
 
-    # Load Latest Predictions
-    live_dir = Path("data/live")
-    pred_files = sorted(live_dir.glob("predictions_*.csv"))
+    # Load Graded Ledger or Generate Initial Ledger
+    settled_path = Path("data/live/settled_predictions.csv")
+    if not settled_path.exists():
+        tracker = TennisResultsTracker()
+        live_file = Path("data/live/predictions_20261030.csv")
+        if not live_file.exists():
+            files = sorted(Path("data/live").glob("predictions_*.csv"))
+            live_file = files[-1] if files else Path("data/live/predictions_20261030.csv")
+        df_ledger, summary = tracker.get_live_results_ledger(
+            predictions_file=live_file,
+            pipeline=pipeline,
+            include_recent_finals=True,
+            max_recent_finals=15,
+            output_file=settled_path,
+        )
+    else:
+        df_ledger = pd.read_csv(settled_path)
 
-    if pred_files:
-        latest_file = pred_files[-1]
-        df_today = pd.read_csv(latest_file)
-        st.caption(f"Loaded active predictions from `{latest_file.name}` ({len(df_today)} matches evaluated)")
+    if not df_ledger.empty:
+        # Performance Telemetry KPI Banner
+        total_bets = len(df_ledger)
+        cashed_bets = int((df_ledger["live_status"] == "CASHED").sum())
+        lost_bets = int((df_ledger["live_status"] == "LOST").sum())
+        pending_bets = int((df_ledger["live_status"].isin(["PENDING", "IN_PLAY"])).sum())
+        settled_bets = cashed_bets + lost_bets
+        win_rate = (cashed_bets / settled_bets * 100.0) if settled_bets > 0 else 0.0
+        net_units = float(df_ledger["profit_units"].sum()) if "profit_units" in df_ledger.columns else 0.0
+
+        st.markdown("---")
+        kpi_b1, kpi_b2, kpi_b3, kpi_b4, kpi_b5 = st.columns(5)
+
+        with kpi_b1:
+            st.markdown(f"""
+            <div class="quant-card">
+                <div class="quant-label">Total Predictions</div>
+                <div class="quant-val">{total_bets}</div>
+                <div class="quant-sub">Active + Settled</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with kpi_b2:
+            st.markdown(f"""
+            <div class="quant-card">
+                <div class="quant-label">✅ Cashed (Won)</div>
+                <div class="quant-val" style="color: #10b981;">{cashed_bets}</div>
+                <div class="quant-sub">Successful Picks</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with kpi_b3:
+            st.markdown(f"""
+            <div class="quant-card">
+                <div class="quant-label">❌ Lost (Busted)</div>
+                <div class="quant-val" style="color: #f43f5e;">{lost_bets}</div>
+                <div class="quant-sub">Unsuccessful Picks</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with kpi_b4:
+            st.markdown(f"""
+            <div class="quant-card">
+                <div class="quant-label">⏳ Pending / In-Play</div>
+                <div class="quant-val" style="color: #38bdf8;">{pending_bets}</div>
+                <div class="quant-sub">Awaiting Outcomes</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with kpi_b5:
+            net_color = "#10b981" if net_units >= 0 else "#f43f5e"
+            st.markdown(f"""
+            <div class="quant-card">
+                <div class="quant-label">Strike Rate & P&L</div>
+                <div class="quant-val" style="color: {net_color};">{win_rate:.1f}%</div>
+                <div class="quant-sub">Net: {net_units:+.2f} Units</div>
+            </div>
+            """, unsafe_allow_html=True)
 
         # Filter bar
+        st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
         flt_c1, flt_c2, flt_c3 = st.columns(3)
         with flt_c1:
-            edge_threshold = st.slider("Min Edge (%)", 0.0, 15.0, float(user_min_edge), 0.5)
+            outcome_filter = st.selectbox(
+                "Filter by Outcome Status",
+                options=["All Matches", "✅ Cashed Predictions Only", "❌ Lost Predictions Only", "⏳ Upcoming / In-Play Only"]
+            )
         with flt_c2:
-            surfaces_avail = df_today["surface"].dropna().unique().tolist()
+            surfaces_avail = df_ledger["surface"].dropna().unique().tolist() if "surface" in df_ledger.columns else ["Hard"]
             sel_surfaces = st.multiselect("Court Surface", options=surfaces_avail, default=surfaces_avail)
         with flt_c3:
-            only_value_bets = st.checkbox("Show Only Actionable +EV Bets", value=False)
+            edge_filter_val = st.slider("Min Edge (%)", 0.0, 15.0, 0.0, 0.5)
 
         # Apply Filters
-        filtered_df = df_today.copy()
-        if sel_surfaces:
+        filtered_df = df_ledger.copy()
+        if sel_surfaces and "surface" in filtered_df.columns:
             filtered_df = filtered_df[filtered_df["surface"].isin(sel_surfaces)]
-        if only_value_bets and "recommended_bet" in filtered_df.columns:
-            filtered_df = filtered_df[filtered_df["recommended_bet"] != "Pass (No Value)"]
         if "edge_pct" in filtered_df.columns:
-            filtered_df = filtered_df[filtered_df["edge_pct"] >= edge_threshold]
+            filtered_df = filtered_df[filtered_df["edge_pct"] >= edge_filter_val]
 
-        st.markdown(f"#### Displaying **{len(filtered_df)}** Filtered Matches")
+        if outcome_filter == "✅ Cashed Predictions Only":
+            filtered_df = filtered_df[filtered_df["live_status"] == "CASHED"]
+        elif outcome_filter == "❌ Lost Predictions Only":
+            filtered_df = filtered_df[filtered_df["live_status"] == "LOST"]
+        elif outcome_filter == "⏳ Upcoming / In-Play Only":
+            filtered_df = filtered_df[filtered_df["live_status"].isin(["PENDING", "IN_PLAY"])]
 
-        # Interactive Cards View for Matches
+        st.markdown(f"#### Displaying **{len(filtered_df)}** Matches ({outcome_filter})")
+
+        # Display Matches with Live Results and Ticks
         for idx, row in filtered_df.iterrows():
             p1 = str(row["player1"])
             p2 = str(row["player2"])
@@ -553,18 +651,34 @@ with tab_today:
             p1_odds = float(row.get("p1_odds", 1.90)) if not pd.isna(row.get("p1_odds")) else float(row.get("p1_fair_odds", 1.90))
             p2_odds = float(row.get("p2_odds", 1.90)) if not pd.isna(row.get("p2_odds")) else float(row.get("p2_fair_odds", 1.90))
 
-            # Extract top 3 simple picks for this match
-            top_picks = TennisPredictionPipeline.extract_top_three_picks(row)
+            # Live Result Status & Badges
+            live_status = str(row.get("live_status", "PENDING"))
+            actual_score = str(row.get("actual_score", "Upcoming"))
+            actual_winner = str(row.get("actual_winner", ""))
+            profit_units = float(row.get("profit_units", 0.0))
+
+            if live_status == "CASHED":
+                status_pill = f'<span class="badge-pill badge-emerald">✅ CASHED (+{profit_units:.2f}u) • Final: {actual_score}</span>'
+                card_border = "border: 1px solid rgba(16, 185, 129, 0.45);"
+            elif live_status == "LOST":
+                status_pill = f'<span class="badge-pill badge-rose">❌ LOST (-1.00u) • Final: {actual_score}</span>'
+                card_border = "border: 1px solid rgba(244, 63, 94, 0.45);"
+            elif live_status == "IN_PLAY":
+                status_pill = f'<span class="badge-pill badge-amber">🎾 IN-PLAY ({actual_score})</span>'
+                card_border = "border: 1px solid rgba(245, 158, 11, 0.45);"
+            else:
+                status_pill = '<span class="badge-pill badge-blue">⏳ SCHEDULED • Upcoming</span>'
+                card_border = "border: 1px solid rgba(255, 255, 255, 0.08);"
 
             # Match Card Container
             st.markdown(f"""
-            <div class="quant-card" style="margin-bottom: 16px;">
+            <div class="quant-card" style="{card_border} margin-bottom: 16px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 8px;">
                     <div>
                         <span style="font-weight: 700; color: #f8fafc; font-size: 1.05rem;">{tourney}</span>
                         <span style="color: #94a3b8; font-size: 0.85rem; margin-left: 8px;">• {surf} Court • {rnd}</span>
                     </div>
-                    <span class="badge-pill badge-blue">Ensemble Projected</span>
+                    <div>{status_pill}</div>
                 </div>
                 <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px;">
                     <div style="flex: 1; min-width: 220px;">
@@ -576,17 +690,20 @@ with tab_today:
                             {p2} <span class="mono-num" style="font-size: 0.9rem; color: #94a3b8;">(@{p2_odds:.2f} | {p2_prob:.1%})</span>
                         </div>
                     </div>
-                    <div style="text-align: right; min-width: 160px;">
+                    <div style="text-align: right; min-width: 180px;">
                         <div style="font-size: 0.78rem; color: #94a3b8; text-transform: uppercase;">Predicted Winner</div>
-                        <div style="font-size: 1.25rem; font-weight: 800; color: #10b981;">{pred_winner}</div>
-                        <div style="font-size: 0.82rem; color: #38bdf8;">Confidence: {win_prob_pct:.1f}%</div>
+                        <div style="font-size: 1.2rem; font-weight: 800; color: #10b981;">{pred_winner} ({win_prob_pct:.1f}%)</div>
+                        <div style="font-size: 0.82rem; color: {'#10b981' if live_status == 'CASHED' else ('#f43f5e' if live_status == 'LOST' else '#38bdf8')};">
+                            {'Outcome: ' + actual_winner + ' won (' + actual_score + ')' if live_status in ('CASHED', 'LOST') else 'Status: Awaiting Match Start'}
+                        </div>
                     </div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
 
-            # Display Top 3 Simple Banker Picks with 1-Click "+ Add to Betslip"
-            if top_picks:
+            # Display Top 3 Banker Picks for Scheduled Matches (or show verified status)
+            top_picks = TennisPredictionPipeline.extract_top_three_picks(row)
+            if top_picks and live_status in ("PENDING", "IN_PLAY"):
                 p_cols = st.columns(3)
                 badges_titles = ["🥇 Banker Pick 1", "🥈 Spread Pick 2", "🥉 Value Pick 3"]
                 badge_styles = ["badge-emerald", "badge-blue", "badge-amber"]
@@ -604,7 +721,6 @@ with tab_today:
                         </div>
                         """, unsafe_allow_html=True)
 
-                        # 1-Click Add to Betslip Button
                         if st.button(f"➕ Add to Slip", key=f"btn_add_slip_{idx}_{p_idx}", use_container_width=True):
                             add_to_betslip(
                                 match=f"{p1} vs {p2}",
@@ -615,10 +731,10 @@ with tab_today:
                             )
                             st.rerun()
 
-            st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
+            st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
 
     else:
-        st.info("No active predictions file found. Click 'Refresh Live ESPN Match Board' above.")
+        st.info("No prediction records found. Click 'Sync Live ESPN Match Results' above.")
 
 
 # =============================================================================
