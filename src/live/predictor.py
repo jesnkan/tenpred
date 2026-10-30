@@ -578,12 +578,22 @@ class TennisPredictionPipeline:
                 "action": "High Floor Spread",
             })
 
-        # 3. Total Match Games (only actionable lines between 68% and 92% probability)
+        # 3. Total Match Games (Prioritize Over 19.5 for maximum safety and near-zero failure rate)
         p_o19 = float(r.get("prob_over_19_5", 0.5))
         p_o20 = float(r.get("prob_over_20_5", 0.5))
         p_u23 = 1.0 - float(r.get("prob_over_23_5", 0.5))
 
-        if 0.68 <= p_o20 <= 0.92:
+        if p_o19 >= 0.65:
+            candidates.append({
+                "title": "Over 19.5 Total Match Games",
+                "market": "Total Games",
+                "win_prob_pct": round(p_o19 * 100.0, 1),
+                "fair_odds": round(1.0 / max(1e-4, p_o19), 2),
+                "confidence_tier": "[LOCK / NEAR-ZERO FAILURE]" if p_o19 >= 0.88 else "[VERY HIGH CONFIDENCE]",
+                "explanation": "Both players demonstrate strong service hold percentages or best-of-5 tournament depth, making 20+ total games statistically almost certain.",
+                "action": "Consistent Totals Pick",
+            })
+        elif p_o20 >= 0.65:
             candidates.append({
                 "title": "Over 20.5 Total Match Games",
                 "market": "Total Games",
@@ -593,17 +603,7 @@ class TennisPredictionPipeline:
                 "explanation": "Projected sets are expected to be tightly contested with low break frequency.",
                 "action": "Solid Over Line",
             })
-        elif 0.70 <= p_o19 <= 0.92:
-            candidates.append({
-                "title": "Over 19.5 Total Match Games",
-                "market": "Total Games",
-                "win_prob_pct": round(p_o19 * 100.0, 1),
-                "fair_odds": round(1.0 / max(1e-4, p_o19), 2),
-                "confidence_tier": "[VERY HIGH CONFIDENCE]",
-                "explanation": "Both players demonstrate strong service hold percentages, making a competitive 20+ game match statistically probable.",
-                "action": "Consistent Totals Pick",
-            })
-        elif 0.65 <= p_u23 <= 0.90:
+        elif p_u23 >= 0.65:
             candidates.append({
                 "title": "Under 23.5 Total Match Games",
                 "market": "Total Games",

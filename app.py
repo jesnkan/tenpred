@@ -758,31 +758,50 @@ with tab_banker_tracker:
             test_row = df_banker_ledger[df_banker_ledger["match"] == chosen_test_match].iloc[0]
             st.info(f"System's Selected Banker Pick: **{test_row['banker_pick']}** (@{test_row['fair_odds']:.2f})")
 
-            test_c1, test_c2 = st.columns(2)
+            test_c1, test_c2, test_c3 = st.columns(3)
             with test_c1:
-                if st.button(f"Simulate {test_row['player1']} Wins (6-4 6-3)", key="btn_test_win", use_container_width=True):
+                if st.button(f"Simulate 3-Set Thriller: {test_row['player1']} Wins 6-4 4-6 6-3 (29 Games)", key="btn_test_thriller", use_container_width=True):
                     st.session_state["demo_settlements"][(test_row['player1'], test_row['player2'])] = {
                         "status": "FINAL",
                         "winner": test_row['player1'],
-                        "score": "6-4 6-3",
+                        "score": "6-4 4-6 6-3",
                         "p1_sets": 2,
-                        "p2_sets": 0,
-                        "total_games": 19,
+                        "p2_sets": 1,
+                        "p1_games": 16,
+                        "p2_games": 13,
+                        "total_games": 29,
                     }
-                    st.toast(f"Simulated match completion: {test_row['player1']} won 6-4 6-3", icon="✅")
+                    st.toast(f"Simulated: {test_row['player1']} won 6-4 4-6 6-3 (29 total games)", icon="✅")
                     st.rerun()
 
             with test_c2:
-                if st.button(f"Simulate {test_row['player2']} Wins (6-4 6-4)", key="btn_test_loss", use_container_width=True):
+                if st.button(f"Simulate Tight 2-0: {test_row['player1']} Wins 7-6 6-4 (23 Games)", key="btn_test_straight", use_container_width=True):
+                    st.session_state["demo_settlements"][(test_row['player1'], test_row['player2'])] = {
+                        "status": "FINAL",
+                        "winner": test_row['player1'],
+                        "score": "7-6 6-4",
+                        "p1_sets": 2,
+                        "p2_sets": 0,
+                        "p1_games": 13,
+                        "p2_games": 10,
+                        "total_games": 23,
+                    }
+                    st.toast(f"Simulated: {test_row['player1']} won 7-6 6-4 (23 total games)", icon="✅")
+                    st.rerun()
+
+            with test_c3:
+                if st.button(f"Simulate Blowout Upset: {test_row['player2']} Wins 6-1 6-2 (15 Games)", key="btn_test_blowout", use_container_width=True):
                     st.session_state["demo_settlements"][(test_row['player1'], test_row['player2'])] = {
                         "status": "FINAL",
                         "winner": test_row['player2'],
-                        "score": "4-6 4-6",
+                        "score": "1-6 2-6",
                         "p1_sets": 0,
                         "p2_sets": 2,
-                        "total_games": 20,
+                        "p1_games": 3,
+                        "p2_games": 12,
+                        "total_games": 15,
                     }
-                    st.toast(f"Simulated match completion: {test_row['player2']} won 6-4 6-4", icon="❌")
+                    st.toast(f"Simulated: {test_row['player2']} won 6-1 6-2 (15 total games)", icon="❌")
                     st.rerun()
 
         # Filter bar

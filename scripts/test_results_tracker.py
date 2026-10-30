@@ -134,6 +134,60 @@ class TestTennisResultsTracker(unittest.TestCase):
         self.assertTrue(grade["is_pending"])
         self.assertEqual(grade["status_color"], "#f59e0b")
 
+    def test_grade_over_19_5_games_banker_pick(self):
+        """Test that Over 19.5 Total Match Games grades correctly."""
+        banker_pick = {
+            "title": "Over 19.5 Total Match Games",
+            "market": "Total Games",
+            "fair_odds": 1.22,
+            "win_prob_pct": 83.5,
+        }
+        # Win scenario (23 games > 19.5)
+        live_result_win = {
+            "status": "FINAL",
+            "winner": "Carlos Alcaraz",
+            "score": "7-6 6-4",
+            "p1_norm": "carlos alcaraz",
+            "p2_norm": "tommy paul",
+            "p1_sets": 2,
+            "p2_sets": 0,
+            "p1_games": 13,
+            "p2_games": 10,
+            "total_games": 23,
+        }
+        grade_win = self.tracker.grade_banker_pick(
+            banker_pick=banker_pick,
+            player1="Carlos Alcaraz",
+            player2="Tommy Paul",
+            live_result=live_result_win,
+        )
+        self.assertEqual(grade_win["settlement"], "WON")
+        self.assertTrue(grade_win["is_won"])
+        self.assertEqual(grade_win["profit_units"], 0.22)
+
+        # Loss scenario (18 games <= 19.5)
+        live_result_loss = {
+            "status": "FINAL",
+            "winner": "Carlos Alcaraz",
+            "score": "6-3 6-3",
+            "p1_norm": "carlos alcaraz",
+            "p2_norm": "tommy paul",
+            "p1_sets": 2,
+            "p2_sets": 0,
+            "p1_games": 12,
+            "p2_games": 6,
+            "total_games": 18,
+        }
+        grade_loss = self.tracker.grade_banker_pick(
+            banker_pick=banker_pick,
+            player1="Carlos Alcaraz",
+            player2="Tommy Paul",
+            live_result=live_result_loss,
+        )
+        self.assertEqual(grade_loss["settlement"], "FAILED")
+        self.assertTrue(grade_loss["is_failed"])
+        self.assertEqual(grade_loss["profit_units"], -1.0)
+
 
 if __name__ == "__main__":
     unittest.main()

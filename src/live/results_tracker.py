@@ -252,6 +252,8 @@ class TennisResultsTracker:
 
         p1_actual_sets = p1_sets if is_p1_competitor_1 else p2_sets
         p2_actual_sets = p2_sets if is_p1_competitor_1 else p1_sets
+        p1_actual_games = live_result.get("p1_games", 0) if is_p1_competitor_1 else live_result.get("p2_games", 0)
+        p2_actual_games = live_result.get("p2_games", 0) if is_p1_competitor_1 else live_result.get("p1_games", 0)
 
         pick_lower = pick_title.lower()
         cashed = False
@@ -284,9 +286,30 @@ class TennisResultsTracker:
                 line_val = float(m.group(1))
                 cashed = (total_games > line_val)
             else:
-                cashed = (total_games >= 22)
+                cashed = (total_games >= 20)
 
-        # Evaluation Rule 5: Straight Match Winner
+        # Evaluation Rule 5: Total Games Under Line
+        elif "under " in pick_lower and "games" in pick_lower:
+            m = re.search(r"under\s+([\d.]+)", pick_lower)
+            if m:
+                line_val = float(m.group(1))
+                cashed = (total_games < line_val)
+            else:
+                cashed = (total_games <= 22)
+
+        # Evaluation Rule 6: Game Handicap Spread
+        elif "game handicap" in pick_lower or "game spread" in pick_lower:
+            m = re.search(r"([+-]?\d+\.?\d*)\s*game", pick_lower)
+            if m:
+                hc = float(m.group(1))
+                if self.normalize_name(player1) in pick_lower:
+                    cashed = ((p1_actual_games - p2_actual_games + hc) > 0)
+                else:
+                    cashed = ((p2_actual_games - p1_actual_games + hc) > 0)
+            else:
+                cashed = (self.normalize_name(actual_winner) == self.normalize_name(player1))
+
+        # Evaluation Rule 7: Straight Match Winner
         else:
             if self.normalize_name(player1) in pick_lower:
                 cashed = (self.normalize_name(actual_winner) == self.normalize_name(player1))
