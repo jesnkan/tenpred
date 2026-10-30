@@ -1,6 +1,8 @@
-"""Central configuration for ATP & WTA Tennis Prediction System."""
+"""Central configuration for tenpred: ATP & WTA Tennis Prediction System."""
 
 from pathlib import Path
+
+SYSTEM_NAME = "tenpred"
 
 # Base directories
 BASE_DIR = Path(__file__).resolve().parent.parent

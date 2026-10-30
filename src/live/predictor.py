@@ -648,8 +648,18 @@ class TennisPredictionPipeline:
                 "action": "First Set Winner Bet",
             })
 
-        # Rank candidates by probability descending
-        candidates.sort(key=lambda x: x["win_prob_pct"], reverse=True)
+        # Smart Dynamic Candidate Ranking:
+        # 1. Elite Set Banker (Player to Win a Set with >= 88.0% probability) is prioritized
+        #    because it is blowout-proof (cashing even if the favorite cruises 6-2 6-2).
+        # 2. In tight contests, Over 19.5 Games takes the lead when its probability is highest.
+        # 3. Otherwise ranks purely by mathematical win probability descending.
+        def candidate_rank_key(c: Dict[str, Any]) -> float:
+            prob = float(c["win_prob_pct"])
+            if c["market"] == "Player to Win a Set" and prob >= 88.0:
+                return prob + 25.0  # Ultra-safe parlay anchor priority
+            return prob
+
+        candidates.sort(key=candidate_rank_key, reverse=True)
 
         # Select top 3 across distinct market categories for variety
         seen_markets = set()

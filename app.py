@@ -24,7 +24,7 @@ import streamlit as st
 
 # Configure wide page layout and title
 st.set_page_config(
-    page_title="Antigravity Tennis Quant Terminal",
+    page_title="tenpred • Tennis Quant Terminal",
     page_icon="🎾",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -323,7 +323,7 @@ with st.sidebar:
     <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
         <span style="font-size: 1.8rem;">🎾</span>
         <div>
-            <div style="font-weight: 800; font-size: 1.15rem; color: #f8fafc; letter-spacing: -0.3px;">ANTIGRAVITY QUANT</div>
+            <div style="font-weight: 800; font-size: 1.15rem; color: #f8fafc; letter-spacing: -0.3px;">TENPRED QUANT</div>
             <div style="font-size: 0.75rem; color: #38bdf8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">ATP & WTA Predictions</div>
         </div>
     </div>
@@ -464,7 +464,7 @@ with st.sidebar:
 st.markdown("""
 <div style="margin-bottom: 20px;">
     <h1 style="margin: 0; font-size: 2.2rem; font-weight: 800; letter-spacing: -0.5px; color: #f8fafc;">
-        ATP & WTA Quantitative Prediction Terminal
+        tenpred <span style="font-size: 1.3rem; color: #38bdf8; font-weight: 500;">• ATP & WTA Quantitative Prediction Terminal</span>
     </h1>
     <p style="color: #94a3b8; font-size: 0.98rem; margin: 4px 0 0 0;">
         Dual GBDT Ensemble (LightGBM + XGBoost + SurfaceElo) & Closed-Form Markov Chain Simulator with Court Pace Environmental Modeling.

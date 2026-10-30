@@ -1,6 +1,6 @@
-# 🎾 ATP & WTA State-of-the-Art Tennis Prediction System
+# 🎾 tenpred: Production Quantitative Tennis Prediction Platform (ATP & WTA)
 
-A modular, production-grade machine learning system designed to forecast outcomes across ATP and WTA professional tennis matches. Built strictly on an **open and free-data approach**, the framework covers everything from surface-adjusted Elo ratings and serve/return dominance features to multi-market probability calibration and live inference.
+**tenpred** is a modular, production-grade machine learning and stochastic simulation engine designed to forecast outcomes across ATP and WTA professional tennis matches. Built strictly on an **open and free-data approach**, the framework covers surface-adjusted Elo ratings, Court Pace Index (CPI) speed adjustments, Dual GBDT Ensemble (LightGBM + XGBoost + SurfaceElo stacking), Closed-Form Markov Chain Simulator, Interactive Betslip, and Real-Time ESPN Results Tracking.
 
 ---
 
