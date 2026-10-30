@@ -11,82 +11,128 @@ from src.live.results_tracker import TennisResultsTracker
 
 
 class TestTennisResultsTracker(unittest.TestCase):
-    """Test suite for live match result fetching and prediction grading."""
+    """Test suite for live match result fetching and Banker Pick settlement grading."""
 
     def setUp(self):
         self.tracker = TennisResultsTracker()
 
     def test_normalize_name(self):
         """Test robust player name normalization."""
-        self.assertEqual(self.tracker._normalize_name("Carlos Alcaraz"), "carlos alcaraz")
-        self.assertEqual(self.tracker._normalize_name("Alex de Minaur"), "alex de minaur")
-        self.assertEqual(self.tracker._normalize_name("J.-L. Struff"), "j l struff")
-        self.assertEqual(self.tracker._normalize_name(None), "")
+        self.assertEqual(self.tracker.normalize_name("Carlos Alcaraz"), "carlos alcaraz")
+        self.assertEqual(self.tracker.normalize_name("Alex de Minaur"), "alex de minaur")
+        self.assertEqual(self.tracker.normalize_name("J.-L. Struff"), "j l struff")
+        self.assertEqual(self.tracker.normalize_name(None), "")
 
-    def test_grade_cashed_prediction(self):
-        """Test that winning prediction grades as CASHED with profit."""
-        pred_row = {
-            "player1": "Carlos Alcaraz",
-            "player2": "Tommy Paul",
-            "p1_win_prob": 0.75,
-            "p1_odds": 1.40,
-            "p2_odds": 3.10,
+    def test_grade_cashed_banker_pick_set(self):
+        """Test that winning banker pick (to win at least 1 set) grades as WON with profit."""
+        banker_pick = {
+            "title": "Carlos Alcaraz to Win At Least 1 Set",
+            "market": "Set Betting",
+            "fair_odds": 1.25,
+            "win_prob_pct": 85.0,
         }
         live_result = {
             "status": "FINAL",
             "winner": "Carlos Alcaraz",
             "score": "6-4 6-3",
+            "p1_norm": "carlos alcaraz",
+            "p2_norm": "tommy paul",
             "p1_sets": 2,
             "p2_sets": 0,
+            "p1_games": 12,
+            "p2_games": 7,
             "total_games": 19,
         }
-        grade = self.tracker.grade_prediction(pred_row, live_result, unit_wager=1.0)
-        self.assertEqual(grade["settlement"], "CASHED")
-        self.assertTrue(grade["is_cashed"])
-        self.assertFalse(grade["is_lost"])
-        self.assertEqual(grade["profit_units"], 0.40)
+        grade = self.tracker.grade_banker_pick(
+            banker_pick=banker_pick,
+            player1="Carlos Alcaraz",
+            player2="Tommy Paul",
+            live_result=live_result,
+        )
+        self.assertEqual(grade["settlement"], "WON")
+        self.assertTrue(grade["is_won"])
+        self.assertFalse(grade["is_failed"])
+        self.assertEqual(grade["profit_units"], 0.25)
         self.assertEqual(grade["status_color"], "#10b981")
 
-    def test_grade_lost_prediction(self):
-        """Test that losing prediction grades as LOST with loss."""
-        pred_row = {
-            "player1": "Carlos Alcaraz",
-            "player2": "Tommy Paul",
-            "p1_win_prob": 0.75,
-            "p1_odds": 1.40,
-            "p2_odds": 3.10,
+    def test_grade_failed_banker_pick_straight_sets(self):
+        """Test that losing banker pick grades as FAILED with loss."""
+        banker_pick = {
+            "title": "Carlos Alcaraz -1.5 Sets (Straight 2-0)",
+            "market": "Set Handicap",
+            "fair_odds": 1.70,
+            "win_prob_pct": 60.0,
         }
         live_result = {
             "status": "FINAL",
             "winner": "Tommy Paul",
             "score": "4-6 6-4 7-6",
+            "p1_norm": "carlos alcaraz",
+            "p2_norm": "tommy paul",
             "p1_sets": 1,
             "p2_sets": 2,
+            "p1_games": 17,
+            "p2_games": 16,
             "total_games": 33,
         }
-        grade = self.tracker.grade_prediction(pred_row, live_result, unit_wager=1.0)
-        self.assertEqual(grade["settlement"], "LOST")
-        self.assertTrue(grade["is_lost"])
-        self.assertFalse(grade["is_cashed"])
+        grade = self.tracker.grade_banker_pick(
+            banker_pick=banker_pick,
+            player1="Carlos Alcaraz",
+            player2="Tommy Paul",
+            live_result=live_result,
+        )
+        self.assertEqual(grade["settlement"], "FAILED")
+        self.assertTrue(grade["is_failed"])
+        self.assertFalse(grade["is_won"])
         self.assertEqual(grade["profit_units"], -1.0)
         self.assertEqual(grade["status_color"], "#f43f5e")
 
-    def test_grade_pending_prediction(self):
+    def test_grade_pending_banker_pick(self):
         """Test that unscheduled or unplayed prediction grades as PENDING."""
-        pred_row = {
-            "player1": "Jannik Sinner",
-            "player2": "Daniil Medvedev",
-            "p1_win_prob": 0.65,
+        banker_pick = {
+            "title": "Jannik Sinner to Win Match",
+            "market": "Moneyline",
+            "fair_odds": 1.45,
+            "win_prob_pct": 70.0,
         }
         live_result = {
             "status": "SCHEDULED",
             "winner": None,
             "score": "",
         }
-        grade = self.tracker.grade_prediction(pred_row, live_result)
+        grade = self.tracker.grade_banker_pick(
+            banker_pick=banker_pick,
+            player1="Jannik Sinner",
+            player2="Daniil Medvedev",
+            live_result=live_result,
+        )
         self.assertEqual(grade["settlement"], "PENDING")
         self.assertTrue(grade["is_pending"])
         self.assertEqual(grade["profit_units"], 0.0)
+        self.assertEqual(grade["status_color"], "#38bdf8")
+
+    def test_grade_in_play_banker_pick(self):
+        """Test that in-progress match grades as IN_PLAY."""
+        banker_pick = {
+            "title": "Jannik Sinner to Win At Least 1 Set",
+            "market": "Set Betting",
+            "fair_odds": 1.20,
+            "win_prob_pct": 88.0,
+        }
+        live_result = {
+            "status": "IN_PROGRESS",
+            "winner": None,
+            "score": "6-4 3-2",
+        }
+        grade = self.tracker.grade_banker_pick(
+            banker_pick=banker_pick,
+            player1="Jannik Sinner",
+            player2="Daniil Medvedev",
+            live_result=live_result,
+        )
+        self.assertEqual(grade["settlement"], "IN_PLAY")
+        self.assertTrue(grade["is_pending"])
+        self.assertEqual(grade["status_color"], "#f59e0b")
 
 
 if __name__ == "__main__":

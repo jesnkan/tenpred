@@ -477,8 +477,9 @@ st.markdown("""
 # Navigation Tabs
 # =============================================================================
 
-tab_today, tab_sim, tab_elo, tab_model, tab_risk = st.tabs([
-    "🔥 Today's Matches & Top Banker Picks",
+tab_today, tab_banker_tracker, tab_sim, tab_elo, tab_model, tab_risk = st.tabs([
+    "🔥 Today's Matches & Predictions",
+    "🎯 Banker Picks Results Tracker",
     "🔬 Match Deep Dive & Simulator",
     "🏆 Surface Elo Leaderboards",
     "🧠 Dual Ensemble Architecture",
@@ -487,36 +488,17 @@ tab_today, tab_sim, tab_elo, tab_model, tab_risk = st.tabs([
 
 
 # =============================================================================
-# TAB 1: TODAY'S MATCHES, LIVE RESULTS & TOP PICKS
+# TAB 1: TODAY'S MATCHES & PREDICTIONS
 # =============================================================================
 
 with tab_today:
-    st.subheader("Live Results Tracker & Daily Value Screener")
-    st.markdown("Real-time settlement engine auditing model predictions against official ESPN tournament scores. Ticks **✅ CASHED** when predictions win and **❌ LOST** when predictions lose.")
+    st.subheader("Today's Scheduled Matches & High-Confidence Predictions")
+    st.markdown("Live scan of active ATP & WTA tournament fixtures evaluated through the calibrated Dual Ensemble and Markov engine.")
 
-    # Top Control Buttons: Sync ESPN Live Matches & Sync Results
+    # Refresh Button
     c_btn1, c_btn2 = st.columns([3, 3])
     with c_btn1:
-        if st.button("🔄 Sync Live ESPN Match Results & Ticks", type="primary", use_container_width=True):
-            with st.spinner("Querying ESPN live scoreboards, grading predictions, and settling outcomes..."):
-                tracker = TennisResultsTracker()
-                live_file = Path("data/live/predictions_20261030.csv")
-                if not live_file.exists():
-                    files = sorted(Path("data/live").glob("predictions_*.csv"))
-                    live_file = files[-1] if files else Path("data/live/predictions_20261030.csv")
-
-                df_ledger, summary = tracker.get_live_results_ledger(
-                    predictions_file=live_file,
-                    pipeline=pipeline,
-                    include_recent_finals=True,
-                    max_recent_finals=15,
-                    output_file="data/live/settled_predictions.csv",
-                )
-                st.success(f"Synced {len(df_ledger)} matches! {summary.get('cashed_bets', 0)} Cashed, {summary.get('lost_bets', 0)} Lost, {summary.get('pending_bets', 0)} Upcoming.")
-                st.rerun()
-
-    with c_btn2:
-        if st.button("📡 Re-Scrape Daily Fixtures from ESPN", use_container_width=True):
+        if st.button("📡 Re-Scrape Daily Fixtures from ESPN", type="primary", use_container_width=True):
             with st.spinner("Fetching latest live scheduled fixtures and running ensemble scoring..."):
                 fetcher = TennisLiveFetcher()
                 live_df = fetcher.fetch_espn_daily_fixtures(tour="both", only_scheduled=True)
@@ -529,114 +511,37 @@ with tab_today:
                 else:
                     st.warning("No new matches found currently on ESPN live board.")
 
-    # Load Graded Ledger or Generate Initial Ledger
-    settled_path = Path("data/live/settled_predictions.csv")
-    if not settled_path.exists():
-        tracker = TennisResultsTracker()
-        live_file = Path("data/live/predictions_20261030.csv")
-        if not live_file.exists():
-            files = sorted(Path("data/live").glob("predictions_*.csv"))
-            live_file = files[-1] if files else Path("data/live/predictions_20261030.csv")
-        df_ledger, summary = tracker.get_live_results_ledger(
-            predictions_file=live_file,
-            pipeline=pipeline,
-            include_recent_finals=True,
-            max_recent_finals=15,
-            output_file=settled_path,
-        )
-    else:
-        df_ledger = pd.read_csv(settled_path)
+    # Load Latest Predictions
+    live_dir = Path("data/live")
+    pred_files = sorted(live_dir.glob("predictions_*.csv"))
 
-    if not df_ledger.empty:
-        # Performance Telemetry KPI Banner
-        total_bets = len(df_ledger)
-        cashed_bets = int((df_ledger["live_status"] == "CASHED").sum())
-        lost_bets = int((df_ledger["live_status"] == "LOST").sum())
-        pending_bets = int((df_ledger["live_status"].isin(["PENDING", "IN_PLAY"])).sum())
-        settled_bets = cashed_bets + lost_bets
-        win_rate = (cashed_bets / settled_bets * 100.0) if settled_bets > 0 else 0.0
-        net_units = float(df_ledger["profit_units"].sum()) if "profit_units" in df_ledger.columns else 0.0
-
-        st.markdown("---")
-        kpi_b1, kpi_b2, kpi_b3, kpi_b4, kpi_b5 = st.columns(5)
-
-        with kpi_b1:
-            st.markdown(f"""
-            <div class="quant-card">
-                <div class="quant-label">Total Predictions</div>
-                <div class="quant-val">{total_bets}</div>
-                <div class="quant-sub">Active + Settled</div>
-            </div>
-            """, unsafe_allow_html=True)
-
-        with kpi_b2:
-            st.markdown(f"""
-            <div class="quant-card">
-                <div class="quant-label">✅ Cashed (Won)</div>
-                <div class="quant-val" style="color: #10b981;">{cashed_bets}</div>
-                <div class="quant-sub">Successful Picks</div>
-            </div>
-            """, unsafe_allow_html=True)
-
-        with kpi_b3:
-            st.markdown(f"""
-            <div class="quant-card">
-                <div class="quant-label">❌ Lost (Busted)</div>
-                <div class="quant-val" style="color: #f43f5e;">{lost_bets}</div>
-                <div class="quant-sub">Unsuccessful Picks</div>
-            </div>
-            """, unsafe_allow_html=True)
-
-        with kpi_b4:
-            st.markdown(f"""
-            <div class="quant-card">
-                <div class="quant-label">⏳ Pending / In-Play</div>
-                <div class="quant-val" style="color: #38bdf8;">{pending_bets}</div>
-                <div class="quant-sub">Awaiting Outcomes</div>
-            </div>
-            """, unsafe_allow_html=True)
-
-        with kpi_b5:
-            net_color = "#10b981" if net_units >= 0 else "#f43f5e"
-            st.markdown(f"""
-            <div class="quant-card">
-                <div class="quant-label">Strike Rate & P&L</div>
-                <div class="quant-val" style="color: {net_color};">{win_rate:.1f}%</div>
-                <div class="quant-sub">Net: {net_units:+.2f} Units</div>
-            </div>
-            """, unsafe_allow_html=True)
+    if pred_files:
+        latest_file = pred_files[-1]
+        df_today = pd.read_csv(latest_file)
+        st.caption(f"Loaded active predictions from `{latest_file.name}` ({len(df_today)} matches evaluated)")
 
         # Filter bar
-        st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
         flt_c1, flt_c2, flt_c3 = st.columns(3)
         with flt_c1:
-            outcome_filter = st.selectbox(
-                "Filter by Outcome Status",
-                options=["All Matches", "✅ Cashed Predictions Only", "❌ Lost Predictions Only", "⏳ Upcoming / In-Play Only"]
-            )
+            edge_threshold = st.slider("Min Edge (%)", 0.0, 15.0, 0.0, 0.5)
         with flt_c2:
-            surfaces_avail = df_ledger["surface"].dropna().unique().tolist() if "surface" in df_ledger.columns else ["Hard"]
+            surfaces_avail = df_today["surface"].dropna().unique().tolist()
             sel_surfaces = st.multiselect("Court Surface", options=surfaces_avail, default=surfaces_avail)
         with flt_c3:
-            edge_filter_val = st.slider("Min Edge (%)", 0.0, 15.0, 0.0, 0.5)
+            only_value_bets = st.checkbox("Show Only Actionable +EV Bets", value=False)
 
         # Apply Filters
-        filtered_df = df_ledger.copy()
-        if sel_surfaces and "surface" in filtered_df.columns:
+        filtered_df = df_today.copy()
+        if sel_surfaces:
             filtered_df = filtered_df[filtered_df["surface"].isin(sel_surfaces)]
+        if only_value_bets and "recommended_bet" in filtered_df.columns:
+            filtered_df = filtered_df[filtered_df["recommended_bet"] != "Pass (No Value)"]
         if "edge_pct" in filtered_df.columns:
-            filtered_df = filtered_df[filtered_df["edge_pct"] >= edge_filter_val]
+            filtered_df = filtered_df[filtered_df["edge_pct"] >= edge_threshold]
 
-        if outcome_filter == "✅ Cashed Predictions Only":
-            filtered_df = filtered_df[filtered_df["live_status"] == "CASHED"]
-        elif outcome_filter == "❌ Lost Predictions Only":
-            filtered_df = filtered_df[filtered_df["live_status"] == "LOST"]
-        elif outcome_filter == "⏳ Upcoming / In-Play Only":
-            filtered_df = filtered_df[filtered_df["live_status"].isin(["PENDING", "IN_PLAY"])]
+        st.markdown(f"#### Displaying **{len(filtered_df)}** Scheduled Matches")
 
-        st.markdown(f"#### Displaying **{len(filtered_df)}** Matches ({outcome_filter})")
-
-        # Display Matches with Live Results and Ticks
+        # Interactive Cards View for Matches
         for idx, row in filtered_df.iterrows():
             p1 = str(row["player1"])
             p2 = str(row["player2"])
@@ -651,34 +556,18 @@ with tab_today:
             p1_odds = float(row.get("p1_odds", 1.90)) if not pd.isna(row.get("p1_odds")) else float(row.get("p1_fair_odds", 1.90))
             p2_odds = float(row.get("p2_odds", 1.90)) if not pd.isna(row.get("p2_odds")) else float(row.get("p2_fair_odds", 1.90))
 
-            # Live Result Status & Badges
-            live_status = str(row.get("live_status", "PENDING"))
-            actual_score = str(row.get("actual_score", "Upcoming"))
-            actual_winner = str(row.get("actual_winner", ""))
-            profit_units = float(row.get("profit_units", 0.0))
-
-            if live_status == "CASHED":
-                status_pill = f'<span class="badge-pill badge-emerald">✅ CASHED (+{profit_units:.2f}u) • Final: {actual_score}</span>'
-                card_border = "border: 1px solid rgba(16, 185, 129, 0.45);"
-            elif live_status == "LOST":
-                status_pill = f'<span class="badge-pill badge-rose">❌ LOST (-1.00u) • Final: {actual_score}</span>'
-                card_border = "border: 1px solid rgba(244, 63, 94, 0.45);"
-            elif live_status == "IN_PLAY":
-                status_pill = f'<span class="badge-pill badge-amber">🎾 IN-PLAY ({actual_score})</span>'
-                card_border = "border: 1px solid rgba(245, 158, 11, 0.45);"
-            else:
-                status_pill = '<span class="badge-pill badge-blue">⏳ SCHEDULED • Upcoming</span>'
-                card_border = "border: 1px solid rgba(255, 255, 255, 0.08);"
+            # Extract top 3 simple picks for this match
+            top_picks = TennisPredictionPipeline.extract_top_three_picks(row)
 
             # Match Card Container
             st.markdown(f"""
-            <div class="quant-card" style="{card_border} margin-bottom: 16px;">
+            <div class="quant-card" style="margin-bottom: 16px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 8px;">
                     <div>
                         <span style="font-weight: 700; color: #f8fafc; font-size: 1.05rem;">{tourney}</span>
                         <span style="color: #94a3b8; font-size: 0.85rem; margin-left: 8px;">• {surf} Court • {rnd}</span>
                     </div>
-                    <div>{status_pill}</div>
+                    <span class="badge-pill badge-blue">⏳ SCHEDULED • Upcoming</span>
                 </div>
                 <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px;">
                     <div style="flex: 1; min-width: 220px;">
@@ -690,20 +579,17 @@ with tab_today:
                             {p2} <span class="mono-num" style="font-size: 0.9rem; color: #94a3b8;">(@{p2_odds:.2f} | {p2_prob:.1%})</span>
                         </div>
                     </div>
-                    <div style="text-align: right; min-width: 180px;">
+                    <div style="text-align: right; min-width: 160px;">
                         <div style="font-size: 0.78rem; color: #94a3b8; text-transform: uppercase;">Predicted Winner</div>
-                        <div style="font-size: 1.2rem; font-weight: 800; color: #10b981;">{pred_winner} ({win_prob_pct:.1f}%)</div>
-                        <div style="font-size: 0.82rem; color: {'#10b981' if live_status == 'CASHED' else ('#f43f5e' if live_status == 'LOST' else '#38bdf8')};">
-                            {'Outcome: ' + actual_winner + ' won (' + actual_score + ')' if live_status in ('CASHED', 'LOST') else 'Status: Awaiting Match Start'}
-                        </div>
+                        <div style="font-size: 1.25rem; font-weight: 800; color: #10b981;">{pred_winner}</div>
+                        <div style="font-size: 0.82rem; color: #38bdf8;">Confidence: {win_prob_pct:.1f}%</div>
                     </div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
 
-            # Display Top 3 Banker Picks for Scheduled Matches (or show verified status)
-            top_picks = TennisPredictionPipeline.extract_top_three_picks(row)
-            if top_picks and live_status in ("PENDING", "IN_PLAY"):
+            # Display Top 3 Simple Banker Picks with 1-Click "+ Add to Betslip"
+            if top_picks:
                 p_cols = st.columns(3)
                 badges_titles = ["🥇 Banker Pick 1", "🥈 Spread Pick 2", "🥉 Value Pick 3"]
                 badge_styles = ["badge-emerald", "badge-blue", "badge-amber"]
@@ -721,6 +607,7 @@ with tab_today:
                         </div>
                         """, unsafe_allow_html=True)
 
+                        # 1-Click Add to Betslip Button
                         if st.button(f"➕ Add to Slip", key=f"btn_add_slip_{idx}_{p_idx}", use_container_width=True):
                             add_to_betslip(
                                 match=f"{p1} vs {p2}",
@@ -731,14 +618,259 @@ with tab_today:
                             )
                             st.rerun()
 
-            st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
+            st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
 
     else:
-        st.info("No prediction records found. Click 'Sync Live ESPN Match Results' above.")
+        st.info("No active predictions file found. Click 'Re-Scrape Daily Fixtures from ESPN' above.")
 
 
 # =============================================================================
-# TAB 2: HEAD-TO-HEAD MATCH SIMULATOR & DERIVATIVE PRICER
+# TAB 2: BANKER PICKS RESULTS & SETTLEMENT TRACKER (DEDICATED SECTION)
+# =============================================================================
+
+with tab_banker_tracker:
+    st.subheader("Banker Picks Outcome & Results Settlement Tracker")
+    st.markdown("Dedicated verification ledger auditing **only the system's selected #1 Banker Pick** for each scheduled fixture against official ESPN final match results.")
+
+    # Session State for Demo / Simulation Settlements
+    if "demo_settlements" not in st.session_state:
+        st.session_state["demo_settlements"] = {}
+
+    tracker = TennisResultsTracker()
+    pred_path = Path("data/live/predictions_20261030.csv")
+    if not pred_path.exists():
+        files = sorted(Path("data/live").glob("predictions_*.csv"))
+        pred_path = files[-1] if files else Path("data/live/predictions_20261030.csv")
+
+    # Fetch live results from ESPN
+    live_espn_results = tracker.fetch_live_match_results(tour="both")
+
+    # Apply demo simulation overrides if any exist
+    for (demo_p1, demo_p2), demo_data in st.session_state["demo_settlements"].items():
+        found = False
+        for res in live_espn_results:
+            if (res["p1_norm"] == tracker.normalize_name(demo_p1) and res["p2_norm"] == tracker.normalize_name(demo_p2)) or \
+               (res["p2_norm"] == tracker.normalize_name(demo_p1) and res["p1_norm"] == tracker.normalize_name(demo_p2)):
+                res.update(demo_data)
+                found = True
+                break
+        if not found:
+            live_espn_results.append({
+                "tournament": demo_data.get("tournament", "Tour Event"),
+                "player1": demo_p1,
+                "player2": demo_p2,
+                "p1_norm": tracker.normalize_name(demo_p1),
+                "p2_norm": tracker.normalize_name(demo_p2),
+                "status": demo_data.get("status", "FINAL"),
+                "winner": demo_data.get("winner"),
+                "score": demo_data.get("score"),
+                "p1_sets": demo_data.get("p1_sets", 2),
+                "p2_sets": demo_data.get("p2_sets", 0),
+                "total_games": demo_data.get("total_games", 19),
+                "tour": "ATP",
+            })
+
+    # Grade Banker Picks
+    df_banker_ledger, summary_banker = tracker.get_banker_picks_ledger(
+        predictions_file=pred_path,
+        live_results=live_espn_results,
+    )
+
+    # Top Control Buttons
+    c_sync_b1, c_sync_b2 = st.columns([3, 3])
+    with c_sync_b1:
+        if st.button("🔄 Check Live Match Results from ESPN", type="primary", use_container_width=True):
+            with st.spinner("Connecting to ESPN live scoreboards and checking match outcomes..."):
+                st.rerun()
+
+    with c_sync_b2:
+        if st.session_state["demo_settlements"]:
+            if st.button("🔄 Reset Demo & Restore Pure ESPN Feed", use_container_width=True):
+                st.session_state["demo_settlements"] = {}
+                st.toast("Restored pure live ESPN feed", icon="🔄")
+                st.rerun()
+
+    # Performance KPI Banner (Only for Banker Picks)
+    if not df_banker_ledger.empty:
+        total_p = summary_banker.get("total_picks", len(df_banker_ledger))
+        won_p = summary_banker.get("won_picks", 0)
+        failed_p = summary_banker.get("failed_picks", 0)
+        pending_p = summary_banker.get("pending_picks", total_p)
+        strike_rate = summary_banker.get("strike_rate_pct", 0.0)
+        net_units = summary_banker.get("net_units", 0.0)
+
+        st.markdown("---")
+        k_col1, k_col2, k_col3, k_col4, k_col5 = st.columns(5)
+
+        with k_col1:
+            st.markdown(f"""
+            <div class="quant-card">
+                <div class="quant-label">Total Banker Picks</div>
+                <div class="quant-val">{total_p}</div>
+                <div class="quant-sub">Selected for Today</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with k_col2:
+            st.markdown(f"""
+            <div class="quant-card">
+                <div class="quant-label">✅ Won (Cashed)</div>
+                <div class="quant-val" style="color: #10b981;">{won_p}</div>
+                <div class="quant-sub">Successful Bankers</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with k_col3:
+            st.markdown(f"""
+            <div class="quant-card">
+                <div class="quant-label">❌ Failed (Lost)</div>
+                <div class="quant-val" style="color: #f43f5e;">{failed_p}</div>
+                <div class="quant-sub">Failed Bankers</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with k_col4:
+            st.markdown(f"""
+            <div class="quant-card">
+                <div class="quant-label">⏳ Pending (Scheduled)</div>
+                <div class="quant-val" style="color: #38bdf8;">{pending_p}</div>
+                <div class="quant-sub">Awaiting Outcomes</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with k_col5:
+            net_color = "#10b981" if net_units >= 0 else "#f43f5e"
+            st.markdown(f"""
+            <div class="quant-card">
+                <div class="quant-label">Banker Strike Rate</div>
+                <div class="quant-val" style="color: {net_color};">{strike_rate:.1f}%</div>
+                <div class="quant-sub">Net: {net_units:+.2f} Units</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        # Optional Demo Verification Expander
+        with st.expander("🧪 Test Settlement Simulator (Verify How Banker Picks Settle)"):
+            st.caption("Matches scheduled for later today are awaiting start time. Use this tool to simulate a completed match score and immediately verify how the system ticks ✅ WON or ❌ FAILED.")
+            match_names = df_banker_ledger["match"].tolist()
+            chosen_test_match = st.selectbox("Select Match to Test", options=match_names, index=1 if len(match_names) > 1 else 0)
+            
+            # Find the row for this match
+            test_row = df_banker_ledger[df_banker_ledger["match"] == chosen_test_match].iloc[0]
+            st.info(f"System's Selected Banker Pick: **{test_row['banker_pick']}** (@{test_row['fair_odds']:.2f})")
+
+            test_c1, test_c2 = st.columns(2)
+            with test_c1:
+                if st.button(f"Simulate {test_row['player1']} Wins (6-4 6-3)", key="btn_test_win", use_container_width=True):
+                    st.session_state["demo_settlements"][(test_row['player1'], test_row['player2'])] = {
+                        "status": "FINAL",
+                        "winner": test_row['player1'],
+                        "score": "6-4 6-3",
+                        "p1_sets": 2,
+                        "p2_sets": 0,
+                        "total_games": 19,
+                    }
+                    st.toast(f"Simulated match completion: {test_row['player1']} won 6-4 6-3", icon="✅")
+                    st.rerun()
+
+            with test_c2:
+                if st.button(f"Simulate {test_row['player2']} Wins (6-4 6-4)", key="btn_test_loss", use_container_width=True):
+                    st.session_state["demo_settlements"][(test_row['player1'], test_row['player2'])] = {
+                        "status": "FINAL",
+                        "winner": test_row['player2'],
+                        "score": "4-6 4-6",
+                        "p1_sets": 0,
+                        "p2_sets": 2,
+                        "total_games": 20,
+                    }
+                    st.toast(f"Simulated match completion: {test_row['player2']} won 6-4 6-4", icon="❌")
+                    st.rerun()
+
+        # Filter bar
+        st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
+        bf_c1, bf_c2 = st.columns([3, 3])
+        with bf_c1:
+            banker_status_filter = st.selectbox(
+                "Filter Banker Outcomes",
+                options=["All Banker Picks", "✅ Won Banker Picks Only", "❌ Failed Banker Picks Only", "⏳ Pending / Scheduled Only"]
+            )
+        with bf_c2:
+            b_surfaces = df_banker_ledger["surface"].dropna().unique().tolist()
+            sel_b_surf = st.multiselect("Filter Court Surface", options=b_surfaces, default=b_surfaces, key="sel_b_surf")
+
+        # Apply Filters
+        filtered_bankers = df_banker_ledger.copy()
+        if sel_b_surf:
+            filtered_bankers = filtered_bankers[filtered_bankers["surface"].isin(sel_b_surf)]
+
+        if banker_status_filter == "✅ Won Banker Picks Only":
+            filtered_bankers = filtered_bankers[filtered_bankers["settlement"] == "WON"]
+        elif banker_status_filter == "❌ Failed Banker Picks Only":
+            filtered_bankers = filtered_bankers[filtered_bankers["settlement"] == "FAILED"]
+        elif banker_status_filter == "⏳ Pending / Scheduled Only":
+            filtered_bankers = filtered_bankers[filtered_bankers["settlement"].isin(["PENDING", "IN_PLAY"])]
+
+        st.markdown(f"#### Displaying **{len(filtered_bankers)}** Selected Banker Picks")
+
+        # Display Each Banker Pick Record
+        for b_idx, b_row in filtered_bankers.iterrows():
+            m_title = b_row["match"]
+            t_name = b_row["tournament"]
+            surf = b_row["surface"]
+            rnd = b_row["round"]
+            b_pick = b_row["banker_pick"]
+            b_mkt = b_row["market"]
+            b_odds = float(b_row["fair_odds"])
+            b_prob = float(b_row["win_prob_pct"])
+            settle = b_row["settlement"]
+            badge = b_row["status_badge"]
+            detail = b_row["outcome_detail"]
+            prof_u = float(b_row["profit_units"])
+
+            if settle == "WON":
+                border_style = "border: 1px solid rgba(16, 185, 129, 0.45);"
+                badge_html = f'<span class="badge-pill badge-emerald">{badge}</span>'
+            elif settle == "FAILED":
+                border_style = "border: 1px solid rgba(244, 63, 94, 0.45);"
+                badge_html = f'<span class="badge-pill badge-rose">{badge}</span>'
+            elif settle == "IN_PLAY":
+                border_style = "border: 1px solid rgba(245, 158, 11, 0.45);"
+                badge_html = f'<span class="badge-pill badge-amber">{badge}</span>'
+            else:
+                border_style = "border: 1px solid rgba(56, 189, 248, 0.25);"
+                badge_html = '<span class="badge-pill badge-blue">⏳ SCHEDULED • Awaiting Match</span>'
+
+            st.markdown(f"""
+            <div class="quant-card" style="{border_style} margin-bottom: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 6px;">
+                    <div>
+                        <span style="font-weight: 700; color: #f8fafc; font-size: 0.95rem;">{t_name}</span>
+                        <span style="color: #94a3b8; font-size: 0.82rem; margin-left: 8px;">• {surf} Court • {rnd}</span>
+                    </div>
+                    <div>{badge_html}</div>
+                </div>
+                <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px;">
+                    <div style="flex: 1; min-width: 240px;">
+                        <div style="font-size: 0.8rem; color: #94a3b8; text-transform: uppercase;">Matchup</div>
+                        <div style="font-size: 1.1rem; font-weight: 700; color: #ffffff;">{m_title}</div>
+                        <div style="font-size: 0.82rem; color: #38bdf8; margin-top: 2px;">{detail}</div>
+                    </div>
+                    <div style="text-align: right; min-width: 200px;">
+                        <div style="font-size: 0.78rem; color: #f59e0b; text-transform: uppercase; font-weight: 700;">System Selected Banker Pick</div>
+                        <div style="font-size: 1.15rem; font-weight: 800; color: #10b981;">{b_pick}</div>
+                        <div class="mono-num" style="font-size: 0.85rem; color: #94a3b8;">
+                            Model Prob: <b>{b_prob:.1f}%</b> | Decimal Odds: <b>@{b_odds:.2f}</b>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+    else:
+        st.info("No banker pick records found. Check ESPN connection.")
+
+
+# =============================================================================
+# TAB 3: HEAD-TO-HEAD MATCH SIMULATOR & DERIVATIVE PRICER
 # =============================================================================
 
 with tab_sim:

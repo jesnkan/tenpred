@@ -1,11 +1,12 @@
 """Real-Time Results Tracker and Prediction Settlement Engine for ATP & WTA Tennis.
 
 Tracks live tournament match completions from ESPN public scoreboards and
-evaluates predictions across all markets (Match Winner, Banker Pick, Set Handicaps, Game Totals):
-- Ticks `✅ CASHED` when a prediction cashes / wins
-- Ticks `❌ LOST` when a prediction loses
-- Marks `⏳ SCHEDULED` or `🎾 IN-PLAY` with live set scores when pending
-- Computes cumulative performance telemetry (Strike Rate %, Net Units P&L, ROI %)
+evaluates predictions across all markets:
+- Strictly grades the system-selected #1 Banker Pick for each match.
+- Ticks `✅ WON` when the banker pick cashes.
+- Ticks `❌ FAILED` when the banker pick loses.
+- Marks `⏳ SCHEDULED` or `🎾 IN-PLAY` with live set scores when awaiting outcome.
+- Zero fake or injected data: evaluates only real model predictions on scheduled tournament matches.
 """
 
 from __future__ import annotations
@@ -22,10 +23,12 @@ import requests
 
 try:
     from configs.config import LIVE_DATA_DIR
+    from src.live.predictor import TennisPredictionPipeline
 except (ImportError, ModuleNotFoundError):
     import sys
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
     from configs.config import LIVE_DATA_DIR
+    from src.live.predictor import TennisPredictionPipeline
 
 logger = logging.getLogger(__name__)
 
@@ -40,21 +43,17 @@ class TennisResultsTracker:
         self.timeout = timeout
 
     @staticmethod
-    def _normalize_name(name: str) -> str:
-        """Sanitize player name for fuzzy matching."""
+    def normalize_name(name: str) -> str:
+        """Sanitize player name for robust matching."""
         if not name or pd.isna(name):
             return ""
-        # Lowercase, remove accents/dots/hyphens, normalize whitespace
         n = str(name).lower().strip()
         n = re.sub(r"[.\-']", " ", n)
         n = " ".join(n.split())
         return n
 
     def fetch_live_match_results(self, tour: str = "both") -> List[Dict[str, Any]]:
-        """Fetch all current and recently completed tournament matches from ESPN.
-
-        Returns a list of match status records including winners, set scores, and total games.
-        """
+        """Fetch all current and completed tournament matches from ESPN."""
         urls = []
         if tour.lower() in ("atp", "both"):
             urls.append((self.ESPN_ATP_URL, "ATP"))
@@ -97,11 +96,9 @@ class TennisResultsTracker:
                             w1 = bool(c1.get("winner", False))
                             w2 = bool(c2.get("winner", False))
 
-                            # Extract set linescores
                             ls1 = [int(ls.get("value", 0)) for ls in c1.get("linescores", []) if ls.get("value") is not None]
                             ls2 = [int(ls.get("value", 0)) for ls in c2.get("linescores", []) if ls.get("value") is not None]
 
-                            # Construct clean score string
                             score_tokens = []
                             p1_sets = 0
                             p2_sets = 0
@@ -118,7 +115,6 @@ class TennisResultsTracker:
                             clean_score = " ".join(score_tokens)
                             total_games = p1_games + p2_games
 
-                            # Determine winner
                             winner_name = None
                             if w1:
                                 winner_name = p1_raw
@@ -130,7 +126,6 @@ class TennisResultsTracker:
                                 elif p2_sets > p1_sets:
                                     winner_name = p2_raw
 
-                            # Normalize status label
                             if status_name == "STATUS_FINAL":
                                 status_label = "FINAL"
                             elif status_name in ("STATUS_IN_PROGRESS", "STATUS_FIRST_HALF", "STATUS_SECOND_HALF"):
@@ -146,11 +141,11 @@ class TennisResultsTracker:
                                 "tournament": t_name,
                                 "player1": p1_raw,
                                 "player2": p2_raw,
-                                "p1_norm": self._normalize_name(p1_raw),
-                                "p2_norm": self._normalize_name(p2_raw),
+                                "p1_norm": self.normalize_name(p1_raw),
+                                "p2_norm": self.normalize_name(p2_raw),
                                 "status": status_label,
                                 "winner": winner_name,
-                                "winner_norm": self._normalize_name(winner_name) if winner_name else None,
+                                "winner_norm": self.normalize_name(winner_name) if winner_name else None,
                                 "score": clean_score,
                                 "p1_sets": p1_sets,
                                 "p2_sets": p2_sets,
@@ -172,8 +167,8 @@ class TennisResultsTracker:
         live_results: List[Dict[str, Any]],
     ) -> Optional[Dict[str, Any]]:
         """Find the corresponding live result for a predicted matchup."""
-        p1_n = self._normalize_name(p1)
-        p2_n = self._normalize_name(p2)
+        p1_n = self.normalize_name(p1)
+        p2_n = self.normalize_name(p2)
 
         # 1. Exact normalized match
         for res in live_results:
@@ -182,11 +177,9 @@ class TennisResultsTracker:
             if (p1_n == rp1 and p2_n == rp2) or (p1_n == rp2 and p2_n == rp1):
                 return res
 
-        # 2. Substring / Surname matching (e.g. 'alcaraz' in 'carlos alcaraz')
-        p1_parts = p1_n.split()
-        p2_parts = p2_n.split()
-        p1_last = p1_parts[-1] if p1_parts else p1_n
-        p2_last = p2_parts[-1] if p2_parts else p2_n
+        # 2. Surname matching
+        p1_last = p1_n.split()[-1] if p1_n else ""
+        p2_last = p2_n.split()[-1] if p2_n else ""
 
         for res in live_results:
             rp1 = res["p1_norm"]
@@ -196,289 +189,228 @@ class TennisResultsTracker:
 
         return None
 
-    def grade_prediction(
+    def grade_banker_pick(
         self,
-        pred_row: Dict[str, Any],
+        banker_pick: Dict[str, Any],
+        player1: str,
+        player2: str,
         live_result: Optional[Dict[str, Any]],
-        unit_wager: float = 1.0,
     ) -> Dict[str, Any]:
-        """Grade a single match prediction against live results."""
-        p1 = str(pred_row.get("player1", ""))
-        p2 = str(pred_row.get("player2", ""))
-        p1_prob = float(pred_row.get("p1_win_prob", 0.5))
-        pred_winner = p1 if p1_prob >= 0.50 else p2
+        """Grade strictly the system's selected Banker Pick against official match results.
 
-        # Extract market odds and recommended pick
-        rec_bet = str(pred_row.get("recommended_bet", pred_winner))
-        p1_odds = float(pred_row.get("p1_odds", pred_row.get("p1_fair_odds", 1.90)))
-        p2_odds = float(pred_row.get("p2_odds", pred_row.get("p2_fair_odds", 1.90)))
-        pick_odds = p1_odds if pred_winner == p1 else p2_odds
+        Returns:
+            Dictionary with settlement ('WON', 'FAILED', 'PENDING', 'IN_PLAY'),
+            badge, actual score, and profit/loss in units.
+        """
+        pick_title = str(banker_pick.get("title", ""))
+        pick_market = str(banker_pick.get("market", "Banker Market"))
+        pick_odds = float(banker_pick.get("fair_odds", 1.25))
+        pick_prob = float(banker_pick.get("win_prob_pct", 80.0))
 
-        # Default: match pending / not started
+        # 1. If match is not found or scheduled: PENDING
         if live_result is None or live_result["status"] == "SCHEDULED":
             return {
                 "settlement": "PENDING",
                 "badge": "⏳ SCHEDULED",
-                "is_cashed": False,
-                "is_lost": False,
+                "is_won": False,
+                "is_failed": False,
                 "is_pending": True,
-                "actual_winner": None,
                 "actual_score": "Upcoming",
+                "actual_winner": "Awaiting Match",
                 "profit_units": 0.0,
-                "pnl_dollars": 0.0,
                 "status_color": "#38bdf8",
+                "outcome_detail": "Match scheduled for today. Awaiting start time.",
             }
 
-        # Match currently in progress
+        # 2. If match is currently playing: IN_PLAY
         if live_result["status"] == "IN_PROGRESS":
-            score_text = live_result["score"] if live_result["score"] else "In Play"
+            score_str = live_result.get("score", "In Play")
             return {
                 "settlement": "IN_PLAY",
-                "badge": f"🎾 IN-PLAY ({score_text})",
-                "is_cashed": False,
-                "is_lost": False,
+                "badge": f"🎾 IN-PLAY ({score_str})",
+                "is_won": False,
+                "is_failed": False,
                 "is_pending": True,
-                "actual_winner": None,
-                "actual_score": score_text,
+                "actual_score": score_str,
+                "actual_winner": "Live on Court",
                 "profit_units": 0.0,
-                "pnl_dollars": 0.0,
                 "status_color": "#f59e0b",
+                "outcome_detail": f"Match currently active: {score_str}",
             }
 
-        # Match completed (FINAL or RETIRED)
-        actual_winner = live_result.get("winner")
+        # 3. Match is complete (FINAL or RETIRED): evaluate the Banker Pick
+        actual_winner = live_result.get("winner", "")
         actual_score = live_result.get("score", "Final")
-        p1_n = self._normalize_name(p1)
-        w_n = self._normalize_name(actual_winner) if actual_winner else ""
+        p1_sets = live_result.get("p1_sets", 0)
+        p2_sets = live_result.get("p2_sets", 0)
+        total_games = live_result.get("total_games", 0)
 
-        # Determine if p1 is the actual winner
-        p1_won = (p1_n in w_n) if w_n else False
-        p2_won = not p1_won if actual_winner else False
+        # Align p1 and p2 relative to live_result competitors
+        p1_n = self.normalize_name(player1)
+        res_p1_n = live_result.get("p1_norm", "")
+        is_p1_competitor_1 = (p1_n == res_p1_n) or (p1_n.split()[-1] in res_p1_n)
 
-        # Grade Moneyline (Did predicted winner win?)
-        if pred_winner == p1:
-            won_bet = p1_won
+        p1_actual_sets = p1_sets if is_p1_competitor_1 else p2_sets
+        p2_actual_sets = p2_sets if is_p1_competitor_1 else p1_sets
+
+        pick_lower = pick_title.lower()
+        cashed = False
+
+        # Evaluation Rule 1: Player to Win At Least 1 Set
+        if "to win at least 1 set" in pick_lower or "to win >= 1 set" in pick_lower:
+            if self.normalize_name(player1) in pick_lower:
+                cashed = (p1_actual_sets >= 1)
+            else:
+                cashed = (p2_actual_sets >= 1)
+
+        # Evaluation Rule 2: Set Handicap -1.5 Sets (Straight 2-0 / 3-0)
+        elif "-1.5 sets" in pick_lower or "straight 2-0" in pick_lower:
+            if self.normalize_name(player1) in pick_lower:
+                cashed = (p1_actual_sets - p2_actual_sets >= 2)
+            else:
+                cashed = (p2_actual_sets - p1_actual_sets >= 2)
+
+        # Evaluation Rule 3: Set Handicap +1.5 Sets (Wins Set)
+        elif "+1.5 sets" in pick_lower:
+            if self.normalize_name(player1) in pick_lower:
+                cashed = (p1_actual_sets >= 1)
+            else:
+                cashed = (p2_actual_sets >= 1)
+
+        # Evaluation Rule 4: Total Games Over Line
+        elif "over " in pick_lower and "games" in pick_lower:
+            m = re.search(r"over\s+([\d.]+)", pick_lower)
+            if m:
+                line_val = float(m.group(1))
+                cashed = (total_games > line_val)
+            else:
+                cashed = (total_games >= 22)
+
+        # Evaluation Rule 5: Straight Match Winner
         else:
-            won_bet = p2_won
+            if self.normalize_name(player1) in pick_lower:
+                cashed = (self.normalize_name(actual_winner) == self.normalize_name(player1))
+            else:
+                cashed = (self.normalize_name(actual_winner) == self.normalize_name(player2))
 
-        if won_bet:
-            profit_u = round((pick_odds - 1.0) * unit_wager, 2)
+        # Result output
+        if cashed:
+            profit = round(pick_odds - 1.0, 2)
             return {
-                "settlement": "CASHED",
-                "badge": f"✅ CASHED (+{profit_u:.2f}u)",
-                "is_cashed": True,
-                "is_lost": False,
+                "settlement": "WON",
+                "badge": f"✅ WON (+{profit:.2f}u)",
+                "is_won": True,
+                "is_failed": False,
                 "is_pending": False,
-                "actual_winner": actual_winner,
                 "actual_score": actual_score,
-                "profit_units": profit_u,
-                "pnl_dollars": round(profit_u * 100.0, 2),
+                "actual_winner": actual_winner,
+                "profit_units": profit,
                 "status_color": "#10b981",
+                "outcome_detail": f"Banker Pick Cashed! {pick_title}. Final: {actual_score} (Winner: {actual_winner})",
             }
         else:
-            loss_u = -round(unit_wager, 2)
             return {
-                "settlement": "LOST",
-                "badge": f"❌ LOST (-{unit_wager:.2f}u)",
-                "is_cashed": False,
-                "is_lost": True,
+                "settlement": "FAILED",
+                "badge": "❌ FAILED (-1.00u)",
+                "is_won": False,
+                "is_failed": True,
                 "is_pending": False,
-                "actual_winner": actual_winner,
                 "actual_score": actual_score,
-                "profit_units": loss_u,
-                "pnl_dollars": -round(unit_wager * 100.0, 2),
+                "actual_winner": actual_winner,
+                "profit_units": -1.0,
                 "status_color": "#f43f5e",
+                "outcome_detail": f"Banker Pick Failed. Final: {actual_score} (Winner: {actual_winner})",
             }
 
-    def sync_and_grade_predictions_file(
+    def get_banker_picks_ledger(
         self,
         predictions_file: Union[str, Path],
+        live_results: Optional[List[Dict[str, Any]]] = None,
         output_file: Optional[Union[str, Path]] = None,
     ) -> Tuple[pd.DataFrame, Dict[str, Any]]:
-        """Grade all predictions in a CSV against live ESPN match results."""
+        """Extract and grade ONLY the system's selected Banker Picks for all scheduled matches.
+
+        Guarantees strictly 100% genuine data tracking with zero injected past fixtures.
+        """
         p_path = Path(predictions_file)
         if not p_path.exists():
             return pd.DataFrame(), {}
 
-        df = pd.read_csv(p_path)
-        if df.empty:
+        df_preds = pd.read_csv(p_path)
+        if df_preds.empty:
             return pd.DataFrame(), {}
 
-        # Fetch all live tournament results
-        live_results = self.fetch_live_match_results(tour="both")
+        if live_results is None:
+            live_results = self.fetch_live_match_results(tour="both")
 
-        graded_rows: List[Dict[str, Any]] = []
-        for _, row in df.iterrows():
+        banker_rows: List[Dict[str, Any]] = []
+
+        for _, row in df_preds.iterrows():
             row_dict = row.to_dict()
             p1 = str(row_dict.get("player1", ""))
             p2 = str(row_dict.get("player2", ""))
+            tourney = str(row_dict.get("tournament", "Tour Event"))
+            surf = str(row_dict.get("surface", "Hard"))
+            rnd = str(row_dict.get("round", "R32"))
 
-            # Find matching live result
-            match_res = self.match_prediction_with_live_result(p1, p2, live_results)
-            grade = self.grade_prediction(row_dict, match_res)
+            # Extract the system's #1 Banker Pick
+            top_picks = TennisPredictionPipeline.extract_top_three_picks(row_dict)
+            if not top_picks:
+                continue
+            banker = top_picks[0]
 
-            row_dict["live_status"] = grade["settlement"]
-            row_dict["result_badge"] = grade["badge"]
-            row_dict["actual_winner"] = grade["actual_winner"]
-            row_dict["actual_score"] = grade["actual_score"]
-            row_dict["profit_units"] = grade["profit_units"]
-            row_dict["pnl_dollars"] = grade["pnl_dollars"]
-            row_dict["status_color"] = grade["status_color"]
+            # Match against live results from ESPN
+            m_res = self.match_prediction_with_live_result(p1, p2, live_results)
+            grade = self.grade_banker_pick(banker, p1, p2, m_res)
 
-            graded_rows.append(row_dict)
+            banker_rows.append({
+                "match": f"{p1} vs {p2}",
+                "player1": p1,
+                "player2": p2,
+                "tournament": tourney,
+                "surface": surf,
+                "round": rnd,
+                "banker_pick": banker["title"],
+                "market": banker["market"],
+                "win_prob_pct": banker["win_prob_pct"],
+                "fair_odds": banker["fair_odds"],
+                "settlement": grade["settlement"],
+                "status_badge": grade["badge"],
+                "actual_score": grade["actual_score"],
+                "actual_winner": grade["actual_winner"],
+                "profit_units": grade["profit_units"],
+                "status_color": grade["status_color"],
+                "outcome_detail": grade["outcome_detail"],
+            })
 
-        df_graded = pd.DataFrame(graded_rows)
-
-        # Summary statistics
-        total = len(df_graded)
-        cashed = int((df_graded["live_status"] == "CASHED").sum())
-        lost = int((df_graded["live_status"] == "LOST").sum())
-        pending = int((df_graded["live_status"].isin(["PENDING", "IN_PLAY"])).sum())
-        settled = cashed + lost
-
-        win_rate = (cashed / settled * 100.0) if settled > 0 else 0.0
-        net_units = float(df_graded["profit_units"].sum())
-        roi_pct = (net_units / settled * 100.0) if settled > 0 else 0.0
-
-        summary = {
-            "total_bets": total,
-            "cashed_bets": cashed,
-            "lost_bets": lost,
-            "pending_bets": pending,
-            "settled_bets": settled,
-            "win_rate_pct": round(win_rate, 1),
-            "net_units": round(net_units, 2),
-            "roi_pct": round(roi_pct, 1),
-            "last_synced": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        }
-
-        # Persist if requested
-        if output_file:
-            out_p = Path(output_file)
-            out_p.parent.mkdir(parents=True, exist_ok=True)
-            df_graded.to_csv(out_p, index=False)
-
-        return df_graded, summary
-
-    def get_live_results_ledger(
-        self,
-        predictions_file: Union[str, Path],
-        pipeline: Optional[Any] = None,
-        include_recent_finals: bool = True,
-        max_recent_finals: int = 15,
-        output_file: Optional[Union[str, Path]] = None,
-    ) -> Tuple[pd.DataFrame, Dict[str, Any]]:
-        """Construct a comprehensive live results ledger combining today's active predictions with recent tournament completions.
-
-        Guarantees that the dashboard displays both real-time ticking for active matches
-        and immediate verified outcomes for recent tournament rounds.
-        """
-        # 1. Fetch live results from ESPN
-        live_results = self.fetch_live_match_results(tour="both")
-
-        # 2. Grade scheduled / active predictions
-        p_path = Path(predictions_file)
-        active_df = pd.read_csv(p_path) if p_path.exists() else pd.DataFrame()
-
-        graded_rows: List[Dict[str, Any]] = []
-        seen_matchups = set()
-
-        if not active_df.empty:
-            for _, row in active_df.iterrows():
-                row_dict = row.to_dict()
-                p1 = str(row_dict.get("player1", ""))
-                p2 = str(row_dict.get("player2", ""))
-                seen_matchups.add((self._normalize_name(p1), self._normalize_name(p2)))
-                seen_matchups.add((self._normalize_name(p2), self._normalize_name(p1)))
-
-                match_res = self.match_prediction_with_live_result(p1, p2, live_results)
-                grade = self.grade_prediction(row_dict, match_res)
-
-                row_dict["live_status"] = grade["settlement"]
-                row_dict["result_badge"] = grade["badge"]
-                row_dict["actual_winner"] = grade["actual_winner"]
-                row_dict["actual_score"] = grade["actual_score"]
-                row_dict["profit_units"] = grade["profit_units"]
-                row_dict["pnl_dollars"] = grade["pnl_dollars"]
-                row_dict["status_color"] = grade["status_color"]
-                graded_rows.append(row_dict)
-
-        # 3. Incorporate recent completed tournament matches if pipeline provided
-        if include_recent_finals and pipeline is not None:
-            finals = [
-                m for m in live_results
-                if m["status"] == "FINAL" and len(m["score"].split()) >= 2
-                and (m["p1_norm"], m["p2_norm"]) not in seen_matchups
-            ]
-
-            if finals:
-                recent_sample = finals[:max_recent_finals]
-                sample_fixtures = []
-                for m in recent_sample:
-                    sample_fixtures.append({
-                        "tournament": m["tournament"],
-                        "player1": m["player1"],
-                        "player2": m["player2"],
-                        "surface": "Hard",
-                        "round": "R16",
-                        "best_of": 3,
-                        "tour": m["tour"],
-                        "p1_odds": 1.75,
-                        "p2_odds": 2.15,
-                    })
-
-                try:
-                    df_finals_pred = pipeline.predict_batch(sample_fixtures)
-                    for _, row in df_finals_pred.iterrows():
-                        row_dict = row.to_dict()
-                        p1 = str(row_dict.get("player1", ""))
-                        p2 = str(row_dict.get("player2", ""))
-
-                        match_res = self.match_prediction_with_live_result(p1, p2, recent_sample)
-                        grade = self.grade_prediction(row_dict, match_res)
-
-                        row_dict["live_status"] = grade["settlement"]
-                        row_dict["result_badge"] = grade["badge"]
-                        row_dict["actual_winner"] = grade["actual_winner"]
-                        row_dict["actual_score"] = grade["actual_score"]
-                        row_dict["profit_units"] = grade["profit_units"]
-                        row_dict["pnl_dollars"] = grade["pnl_dollars"]
-                        row_dict["status_color"] = grade["status_color"]
-                        graded_rows.append(row_dict)
-                except Exception as exc:
-                    logger.warning(f"Error predicting recent finals: {exc}")
-
-        if not graded_rows:
+        df_ledger = pd.DataFrame(banker_rows)
+        if df_ledger.empty:
             return pd.DataFrame(), {}
 
-        df_all = pd.DataFrame(graded_rows)
+        # Performance Statistics
+        total = len(df_ledger)
+        won = int((df_ledger["settlement"] == "WON").sum())
+        failed = int((df_ledger["settlement"] == "FAILED").sum())
+        pending = int((df_ledger["settlement"].isin(["PENDING", "IN_PLAY"])).sum())
+        settled = won + failed
 
-        # Calculate performance statistics
-        cashed = int((df_all["live_status"] == "CASHED").sum())
-        lost = int((df_all["live_status"] == "LOST").sum())
-        pending = int((df_all["live_status"].isin(["PENDING", "IN_PLAY"])).sum())
-        settled = cashed + lost
-
-        win_rate = (cashed / settled * 100.0) if settled > 0 else 0.0
-        net_units = float(df_all["profit_units"].sum())
-        roi_pct = (net_units / settled * 100.0) if settled > 0 else 0.0
+        strike_rate = (won / settled * 100.0) if settled > 0 else 0.0
+        net_units = float(df_ledger["profit_units"].sum())
 
         summary = {
-            "total_bets": len(df_all),
-            "cashed_bets": cashed,
-            "lost_bets": lost,
-            "pending_bets": pending,
-            "settled_bets": settled,
-            "win_rate_pct": round(win_rate, 1),
+            "total_picks": total,
+            "won_picks": won,
+            "failed_picks": failed,
+            "pending_picks": pending,
+            "settled_picks": settled,
+            "strike_rate_pct": round(strike_rate, 1),
             "net_units": round(net_units, 2),
-            "roi_pct": round(roi_pct, 1),
             "last_synced": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         }
 
         if output_file:
             out_p = Path(output_file)
             out_p.parent.mkdir(parents=True, exist_ok=True)
-            df_all.to_csv(out_p, index=False)
+            df_ledger.to_csv(out_p, index=False)
 
-        return df_all, summary
-
+        return df_ledger, summary
