@@ -1,12 +1,12 @@
-"""Antigravity Tennis Quantitative Prediction Platform.
+"""tenpred • Tennis Match Intelligence & Betting Analytics Platform.
 
 Institutional-grade ATP & WTA forecasting terminal featuring:
-- Dual GBDT Ensemble (LightGBM + XGBoost + SurfaceElo stacking)
-- Closed-Form Markov Chain point-to-match scoreline simulator
-- Court Pace Index (CPI) and Indoor environmental speed adjustments
-- Interactive Betslip & Parlay Builder with Correlated Kelly Staking
-- Real-time ESPN scheduled tournament match feed
-- Modern, bespoke, mobile-responsive dark trading terminal UI
+- Match winner & derivative market predictions
+- Closed-form point-to-match scoreline simulator
+- Court surface and environmental adjustments
+- Interactive Betslip & Parlay Builder with Kelly Staking
+- Real-time ESPN tournament fixture settlement
+- Clean, responsive institutional light interface
 """
 
 from __future__ import annotations
@@ -25,40 +25,47 @@ import streamlit as st
 
 # Configure wide page layout and title
 st.set_page_config(
-    page_title="tenpred • Tennis Quant Terminal",
+    page_title="tenpred • Tennis Match Intelligence & Predictions",
     page_icon="🎾",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
 # =============================================================================
-# Bespoke Non-AI Institutional Dark Theme & Mobile Responsive CSS
+# Clean White Institutional Sports Analytics Theme
 # =============================================================================
 st.markdown("""
 <style>
-    /* CSS Variables */
+    /* Clean Light Institutional Theme */
     :root {
-        --bg-main: #0c1017;
-        --card-bg: #131924;
-        --card-hover: #18202e;
-        --card-border: rgba(255, 255, 255, 0.08);
-        --accent-emerald: #10b981;
-        --accent-emerald-soft: rgba(16, 185, 129, 0.12);
-        --accent-blue: #38bdf8;
-        --accent-blue-soft: rgba(56, 189, 248, 0.12);
-        --accent-amber: #f59e0b;
-        --accent-amber-soft: rgba(245, 158, 11, 0.12);
-        --accent-rose: #f43f5e;
-        --accent-rose-soft: rgba(244, 63, 94, 0.12);
-        --text-primary: #f1f5f9;
-        --text-secondary: #94a3b8;
+        --bg-main: #f8fafc;
+        --card-bg: #ffffff;
+        --card-border: #e2e8f0;
+        --card-border-hover: #cbd5e1;
+        --text-primary: #0f172a;
+        --text-secondary: #334155;
         --text-muted: #64748b;
+        --accent-primary: #2563eb;
+        --accent-emerald: #059669;
+        --accent-rose: #e11d48;
+        --accent-amber: #d97706;
     }
 
-    /* Overall Layout & Typography */
+    /* Base Body & App Canvas */
     .stApp {
-        background-color: var(--bg-main);
+        background-color: #f8fafc !important;
+        color: #0f172a !important;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif;
+    }
+
+    /* Force light backgrounds for containers and sidebars */
+    [data-testid="stSidebar"] {
+        background-color: #ffffff !important;
+        border-right: 1px solid #e2e8f0 !important;
+    }
+
+    [data-testid="stSidebar"] * {
+        color: #1e293b;
     }
 
     /* Monospace precision for odds, stats, numbers */
@@ -69,30 +76,31 @@ st.markdown("""
 
     /* Custom Metric Cards */
     .quant-card {
-        background-color: var(--card-bg);
-        border: 1px solid var(--card-border);
+        background-color: #ffffff;
+        border: 1px solid #e2e8f0;
         border-radius: 12px;
         padding: 18px 20px;
-        transition: transform 0.15s ease, border-color 0.15s ease;
-        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+        transition: box-shadow 0.15s ease, border-color 0.15s ease;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
     }
     .quant-card:hover {
-        border-color: rgba(255, 255, 255, 0.18);
+        border-color: #cbd5e1;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
     }
 
     .quant-label {
-        font-size: 0.78rem;
-        font-weight: 600;
+        font-size: 0.75rem;
+        font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.8px;
-        color: var(--text-muted);
+        letter-spacing: 0.6px;
+        color: #64748b;
         margin-bottom: 4px;
     }
 
     .quant-val {
-        font-size: 2rem;
-        font-weight: 700;
-        color: var(--text-primary);
+        font-size: 1.85rem;
+        font-weight: 800;
+        color: #0f172a;
         line-height: 1.1;
         margin-bottom: 4px;
         font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
@@ -100,7 +108,8 @@ st.markdown("""
 
     .quant-sub {
         font-size: 0.82rem;
-        color: var(--text-secondary);
+        color: #64748b;
+        font-weight: 500;
     }
 
     /* Badge Pills */
@@ -111,70 +120,85 @@ st.markdown("""
         padding: 4px 10px;
         border-radius: 9999px;
         font-size: 0.78rem;
-        font-weight: 600;
-        letter-spacing: 0.3px;
+        font-weight: 700;
+        letter-spacing: 0.2px;
     }
     .badge-emerald {
-        background: var(--accent-emerald-soft);
-        color: var(--accent-emerald);
-        border: 1px solid rgba(16, 185, 129, 0.25);
+        background: #ecfdf5;
+        color: #047857;
+        border: 1px solid #a7f3d0;
     }
     .badge-blue {
-        background: var(--accent-blue-soft);
-        color: var(--accent-blue);
-        border: 1px solid rgba(56, 189, 248, 0.25);
+        background: #eff6ff;
+        color: #1d4ed8;
+        border: 1px solid #bfdbfe;
     }
     .badge-amber {
-        background: var(--accent-amber-soft);
-        color: var(--accent-amber);
-        border: 1px solid rgba(245, 158, 11, 0.25);
+        background: #fffbeb;
+        color: #b45309;
+        border: 1px solid #fde68a;
     }
     .badge-rose {
-        background: var(--accent-rose-soft);
-        color: var(--accent-rose);
-        border: 1px solid rgba(244, 63, 94, 0.25);
+        background: #fff1f2;
+        color: #be123c;
+        border: 1px solid #fecdd3;
     }
     .badge-slate {
-        background: rgba(148, 163, 184, 0.15);
-        color: #94a3b8;
-        border: 1px solid rgba(148, 163, 184, 0.3);
+        background: #f1f5f9;
+        color: #475569;
+        border: 1px solid #cbd5e1;
     }
 
     /* Betslip Drawer */
     .betslip-box {
-        background-color: #101622;
-        border: 1px solid rgba(56, 189, 248, 0.3);
-        border-radius: 12px;
-        padding: 16px;
-        margin-bottom: 16px;
+        background-color: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 14px 16px;
+        margin-bottom: 14px;
     }
     .betslip-item {
-        background: #172030;
-        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
         border-radius: 8px;
         padding: 10px 12px;
         margin-bottom: 8px;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
     }
 
     /* Tabs Styling */
     .stTabs [data-baseweb="tab-list"] {
-        gap: 6px;
-        background-color: #0f141d;
-        padding: 6px;
+        gap: 4px;
+        background-color: #f1f5f9;
+        padding: 5px;
         border-radius: 10px;
-        border: 1px solid var(--card-border);
+        border: 1px solid #e2e8f0;
     }
     .stTabs [data-baseweb="tab"] {
         padding: 8px 18px;
         border-radius: 8px;
-        color: var(--text-secondary);
-        font-weight: 500;
+        color: #64748b;
+        font-weight: 600;
         font-size: 0.9rem;
+        background-color: transparent !important;
+        border: none !important;
     }
     .stTabs [aria-selected="true"] {
-        background-color: #1e2638 !important;
-        color: #ffffff !important;
-        font-weight: 600;
+        background-color: #ffffff !important;
+        color: #0f172a !important;
+        font-weight: 700 !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+    }
+
+    /* Streamlit widget tweaks for clean light look */
+    div[data-testid="stExpander"] {
+        background-color: #ffffff !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 10px !important;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.03) !important;
+    }
+    div[data-testid="stExpander"] details {
+        border: none !important;
     }
 
     /* Mobile Responsive Media Queries */
@@ -326,21 +350,17 @@ else:
 
 with st.sidebar:
     st.markdown("""
-    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
-        <span style="font-size: 1.8rem;">🎾</span>
+    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #e2e8f0;">
+        <span style="font-size: 1.7rem;">🎾</span>
         <div>
-            <div style="font-weight: 800; font-size: 1.15rem; color: #f8fafc; letter-spacing: -0.3px;">TENPRED QUANT</div>
-            <div style="font-size: 0.75rem; color: #38bdf8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">ATP & WTA Predictions</div>
+            <div style="font-weight: 800; font-size: 1.2rem; color: #0f172a; letter-spacing: -0.4px;">TenPred</div>
+            <div style="font-size: 0.75rem; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">ATP & WTA Analytics</div>
         </div>
     </div>
-    """, unsafe_allow_html=True)
-
-    # Telemetry Badges
-    st.markdown("""
-    <div style="display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 16px 0;">
-        <span class="badge-pill badge-emerald">● Dual GBDT Ensemble</span>
-        <span class="badge-pill badge-blue">● CPI Speed Engine</span>
-        <span class="badge-pill badge-amber">● Kelly Sizing</span>
+    <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px;">
+        <span class="badge-pill badge-blue">ATP Tour</span>
+        <span class="badge-pill badge-emerald">WTA Tour</span>
+        <span class="badge-pill badge-slate">Live Settlement</span>
     </div>
     """, unsafe_allow_html=True)
 
@@ -353,16 +373,16 @@ with st.sidebar:
 
     st.markdown(f"""
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-        <span style="font-weight: 700; font-size: 0.95rem; color: #f8fafc;">📋 Active Betslip</span>
-        <span class="badge-pill {'badge-emerald' if n_legs > 0 else 'badge-amber'}">{n_legs} Leg{'s' if n_legs != 1 else ''}</span>
+        <span style="font-weight: 700; font-size: 0.95rem; color: #0f172a;">Active Betslip</span>
+        <span class="badge-pill {'badge-emerald' if n_legs > 0 else 'badge-slate'}">{n_legs} Leg{'s' if n_legs != 1 else ''}</span>
     </div>
     """, unsafe_allow_html=True)
 
     if n_legs == 0:
         st.markdown("""
-        <div style="background: rgba(255,255,255,0.03); border: 1px dashed rgba(255,255,255,0.12); border-radius: 8px; padding: 14px; text-align: center; color: #94a3b8; font-size: 0.85rem;">
+        <div style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 14px; text-align: center; color: #64748b; font-size: 0.85rem;">
             Your betslip is empty.<br>
-            Click <b style="color: #38bdf8;">+ Add to Slip</b> on any match pick to build single or multi-leg parlays.
+            Click <b style="color: #2563eb;">+ Add to Slip</b> on any match pick to build single or multi-leg wagers.
         </div>
         """, unsafe_allow_html=True)
     else:
@@ -376,11 +396,11 @@ with st.sidebar:
 
             st.markdown(f"""
             <div class="betslip-item">
-                <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 2px;">{leg['match']}</div>
-                <div style="font-size: 0.88rem; font-weight: 600; color: #ffffff;">{leg['pick']}</div>
+                <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 2px;">{leg['match']}</div>
+                <div style="font-size: 0.88rem; font-weight: 700; color: #0f172a;">{leg['pick']}</div>
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
-                    <span class="mono-num" style="color: #10b981; font-weight: 700;">@{leg['odds']:.2f}</span>
-                    <span style="font-size: 0.78rem; color: #38bdf8;">Prob: {leg['prob']:.1%}</span>
+                    <span class="mono-num" style="color: #059669; font-weight: 800;">@{leg['odds']:.2f}</span>
+                    <span style="font-size: 0.78rem; color: #2563eb; font-weight: 600;">Prob: {leg['prob']:.1%}</span>
                 </div>
             </div>
             """, unsafe_allow_html=True)
@@ -395,24 +415,24 @@ with st.sidebar:
 
         # Parlay Metrics Summary
         parlay_ev = (total_odds * joint_prob) - 1.0
-        ev_color = "#10b981" if parlay_ev > 0 else "#f43f5e"
+        ev_color = "#059669" if parlay_ev > 0 else "#e11d48"
 
         st.markdown(f"""
         <div class="betslip-box">
-            <div style="font-size: 0.78rem; font-weight: 600; color: #94a3b8; text-transform: uppercase;">
+            <div style="font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase;">
                 {'Single Wager' if n_legs == 1 else f'{n_legs}-Leg Parlay Summary'}
             </div>
             <div style="display: flex; justify-content: space-between; align-items: baseline; margin: 4px 0;">
-                <span style="font-size: 0.9rem; color: #cbd5e1;">Cumulative Odds:</span>
-                <span class="mono-num" style="font-size: 1.4rem; font-weight: 800; color: #38bdf8;">@{total_odds:.2f}</span>
+                <span style="font-size: 0.88rem; color: #475569;">Cumulative Odds:</span>
+                <span class="mono-num" style="font-size: 1.35rem; font-weight: 800; color: #2563eb;">@{total_odds:.2f}</span>
             </div>
             <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;">
-                <span style="font-size: 0.85rem; color: #cbd5e1;">Joint Win Probability:</span>
-                <span class="mono-num" style="font-size: 0.95rem; font-weight: 700; color: #f8fafc;">{joint_prob:.1%}</span>
+                <span style="font-size: 0.85rem; color: #475569;">Win Probability:</span>
+                <span class="mono-num" style="font-size: 0.92rem; font-weight: 700; color: #0f172a;">{joint_prob:.1%}</span>
             </div>
             <div style="display: flex; justify-content: space-between; align-items: baseline;">
-                <span style="font-size: 0.85rem; color: #cbd5e1;">Expected Value (EV):</span>
-                <span class="mono-num" style="font-size: 0.95rem; font-weight: 700; color: {ev_color};">{parlay_ev:+.1%}</span>
+                <span style="font-size: 0.85rem; color: #475569;">Expected Value (EV):</span>
+                <span class="mono-num" style="font-size: 0.92rem; font-weight: 700; color: {ev_color};">{parlay_ev:+.1%}</span>
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -423,19 +443,19 @@ with st.sidebar:
         net_profit = potential_payout - wager_amount
 
         st.markdown(f"""
-        <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 8px; padding: 10px 14px; margin-bottom: 10px;">
+        <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 10px 14px; margin-bottom: 10px;">
             <div style="display: flex; justify-content: space-between;">
-                <span style="font-size: 0.82rem; color: #94a3b8;">Potential Payout:</span>
-                <span class="mono-num" style="font-weight: 700; color: #f8fafc;">${potential_payout:,.2f}</span>
+                <span style="font-size: 0.82rem; color: #065f46; font-weight: 600;">Potential Payout:</span>
+                <span class="mono-num" style="font-weight: 700; color: #0f172a;">${potential_payout:,.2f}</span>
             </div>
             <div style="display: flex; justify-content: space-between; margin-top: 2px;">
-                <span style="font-size: 0.82rem; color: #94a3b8;">Net Profit:</span>
-                <span class="mono-num" style="font-weight: 800; color: #10b981;">+${net_profit:,.2f}</span>
+                <span style="font-size: 0.82rem; color: #065f46; font-weight: 600;">Net Profit:</span>
+                <span class="mono-num" style="font-weight: 800; color: #059669;">+${net_profit:,.2f}</span>
             </div>
         </div>
         """, unsafe_allow_html=True)
 
-        if st.button("🗑️ Clear Betslip", use_container_width=True):
+        if st.button("Clear Betslip", use_container_width=True):
             clear_betslip()
             st.rerun()
 
@@ -443,7 +463,7 @@ with st.sidebar:
     # Bankroll Management Settings
     # -------------------------------------------------------------------------
     st.markdown("---")
-    st.markdown("<span style='font-weight: 700; font-size: 0.95rem; color: #f8fafc;'>⚙️ Bankroll Risk Settings</span>", unsafe_allow_html=True)
+    st.markdown("<span style='font-weight: 700; font-size: 0.95rem; color: #0f172a;'>Bankroll & Stake Settings</span>", unsafe_allow_html=True)
     user_bankroll = st.number_input("Total Bankroll ($)", min_value=100.0, value=10000.0, step=500.0)
     user_kelly = st.slider("Kelly Fraction", min_value=0.10, max_value=0.50, value=0.25, step=0.05,
                            help="0.25 = Quarter Kelly (recommended for variance damping)")
@@ -460,7 +480,7 @@ with st.sidebar:
     )
 
     st.markdown("---")
-    st.caption("Active Base: 11,561 Official Sackmann Matches | Clean Decimal Odds")
+    st.caption("Active Records: 11,561 Historical Match Archives | Clean Decimal Odds")
 
 
 # =============================================================================
@@ -468,28 +488,34 @@ with st.sidebar:
 # =============================================================================
 
 st.markdown("""
-<div style="margin-bottom: 20px;">
-    <h1 style="margin: 0; font-size: 2.2rem; font-weight: 800; letter-spacing: -0.5px; color: #f8fafc;">
-        tenpred <span style="font-size: 1.3rem; color: #38bdf8; font-weight: 500;">• ATP & WTA Quantitative Prediction Terminal</span>
-    </h1>
-    <p style="color: #94a3b8; font-size: 0.98rem; margin: 4px 0 0 0;">
-        Dual GBDT Ensemble (LightGBM + XGBoost + SurfaceElo) & Closed-Form Markov Chain Simulator with Court Pace Environmental Modeling.
-    </p>
+<div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 16px; margin-bottom: 20px; border-bottom: 1px solid #e2e8f0;">
+    <div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 1.8rem;">🎾</span>
+            <span style="font-size: 1.85rem; font-weight: 800; letter-spacing: -0.6px; color: #0f172a;">tenpred</span>
+            <span style="background: #eff6ff; color: #2563eb; font-weight: 700; font-size: 0.78rem; padding: 3px 8px; border-radius: 6px; border: 1px solid #bfdbfe;">ATP & WTA MATCH INTELLIGENCE</span>
+        </div>
+        <p style="color: #64748b; font-size: 0.92rem; margin: 4px 0 0 0;">
+            Institutional tennis analytics, consensus market odds, and real-time score settlement.
+        </p>
+    </div>
+    <div style="text-align: right; display: flex; align-items: center; gap: 8px;">
+        <span class="badge-pill badge-emerald">● Live ESPN Feed</span>
+    </div>
 </div>
 """, unsafe_allow_html=True)
 
 
 # =============================================================================
-# Navigation Tabs
+# Navigation Tabs (Clean & Professional, No Emojis, No AI Gimmicks)
 # =============================================================================
 
-tab_today, tab_banker_tracker, tab_sim, tab_elo, tab_model, tab_risk = st.tabs([
-    "🔥 Today's Matches & Predictions",
-    "🎯 Banker Picks Results Tracker",
-    "🔬 Match Deep Dive & Simulator",
-    "🏆 Surface Elo Leaderboards",
-    "🧠 Dual Ensemble Architecture",
-    "🛡️ Portfolio Risk & Monte Carlo",
+tab_today, tab_banker_tracker, tab_sim, tab_elo, tab_risk = st.tabs([
+    "Match Predictions",
+    "Results Tracker",
+    "Head-to-Head Simulator",
+    "Player Rankings",
+    "Bankroll Calculator",
 ])
 
 
@@ -533,14 +559,14 @@ for (demo_p1, demo_p2), demo_data in st.session_state["demo_settlements"].items(
 # =============================================================================
 
 with tab_today:
-    st.subheader("Today's Scheduled Matches & High-Confidence Predictions")
-    st.markdown("Live scan of active ATP & WTA tournament fixtures evaluated through the calibrated Dual Ensemble and Markov engine with real-time outcome tracking.")
+    st.subheader("Match Predictions & Consensus Market Odds")
+    st.markdown("Live scan of active ATP & WTA tournament fixtures with consensus market odds and automated match settlement.")
 
     # Refresh Button
     c_btn1, c_btn2 = st.columns([3, 3])
     with c_btn1:
-        if st.button("📡 Re-Scrape Daily Fixtures from ESPN", type="primary", use_container_width=True):
-            with st.spinner("Fetching latest live scheduled fixtures and running ensemble scoring..."):
+        if st.button("Fetch Daily Fixtures from ESPN", type="primary", use_container_width=True):
+            with st.spinner("Fetching latest live scheduled fixtures and updating predictions..."):
                 fetcher = TennisLiveFetcher()
                 runner = DailyRunner()
                 live_df = fetcher.fetch_espn_daily_fixtures(tour="both", only_scheduled=False)
@@ -566,7 +592,7 @@ with tab_today:
                     st.warning("No new matches found currently on ESPN live board.")
 
     with c_btn2:
-        if st.button("🔄 Sync Live Match Scores from ESPN", use_container_width=True):
+        if st.button("Sync Live Scores from ESPN", use_container_width=True):
             with st.spinner("Updating live scoreboards..."):
                 st.rerun()
 
@@ -581,12 +607,12 @@ with tab_today:
         date_display_map = {}
         for d in avail_dates:
             if d == today_iso:
-                date_display_map[f"📅 Today's Matches ({d})"] = d
+                date_display_map[f"Today ({d})"] = d
             elif d == tomorrow_iso:
-                date_display_map[f"📅 Tomorrow's Matches ({d})"] = d
+                date_display_map[f"Tomorrow ({d})"] = d
             else:
-                date_display_map[f"📅 Matches for {d}"] = d
-        date_display_map["🌟 All Matches (Consolidated)"] = "all"
+                date_display_map[f"Matches for {d}"] = d
+        date_display_map["All Matches (Consolidated)"] = "all"
 
         tab1_options = list(date_display_map.keys())
 
@@ -599,7 +625,7 @@ with tab_today:
 
         st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True)
         sel_date_label = st.radio(
-            "📅 Select Match Schedule & Prediction Date",
+            "Select Fixture Date:",
             options=tab1_options,
             index=def_tab1_idx,
             horizontal=True,
@@ -688,17 +714,17 @@ with tab_today:
                     if not m_time_val or m_time_val == "nan":
                         m_time_val = m_res.get("match_time", "")
                     if st_name == "FINAL":
-                        card_status_badge = f'<span class="badge-pill badge-emerald">🏁 FINAL • {sc_str} (Winner: {wn_str})</span>'
+                        card_status_badge = f'<span class="badge-pill badge-emerald">FINAL • {sc_str} ({wn_str} won)</span>'
                     elif st_name == "WALKOVER":
-                        card_status_badge = f'<span class="badge-pill badge-slate">⚠️ WALKOVER (W/O) • {wn_str} adv</span>'
+                        card_status_badge = f'<span class="badge-pill badge-slate">WALKOVER (W/O) • {wn_str} adv</span>'
                     elif st_name == "RETIRED":
-                        card_status_badge = f'<span class="badge-pill badge-amber">⚠️ RETIRED ({sc_str}) • {wn_str} won</span>'
+                        card_status_badge = f'<span class="badge-pill badge-amber">RETIRED ({sc_str}) • {wn_str} won</span>'
                     elif st_name == "IN_PROGRESS":
-                        card_status_badge = f'<span class="badge-pill badge-amber">🎾 LIVE ON COURT • {sc_str}</span>'
+                        card_status_badge = f'<span class="badge-pill badge-amber">LIVE ON COURT • {sc_str}</span>'
                     else:
-                        card_status_badge = '<span class="badge-pill badge-blue">⏳ SCHEDULED • Upcoming</span>'
+                        card_status_badge = '<span class="badge-pill badge-blue">SCHEDULED • Upcoming</span>'
                 else:
-                    card_status_badge = '<span class="badge-pill badge-blue">⏳ SCHEDULED • Upcoming</span>'
+                    card_status_badge = '<span class="badge-pill badge-blue">SCHEDULED • Upcoming</span>'
 
                 if not m_time_val or m_time_val == "nan":
                     m_time_val = "Scheduled"
@@ -709,38 +735,38 @@ with tab_today:
                 # Match Card Container
                 st.markdown(f"""
                 <div class="quant-card" style="margin-bottom: 16px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 8px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px;">
                         <div>
-                            <span style="font-weight: 700; color: #f8fafc; font-size: 1.05rem;">{tourney}</span>
-                            <span style="color: #94a3b8; font-size: 0.85rem; margin-left: 8px;">• {surf} Court • {rnd}</span>
-                            <span style="color: #38bdf8; font-size: 0.85rem; margin-left: 12px; font-weight: 600; background: rgba(56, 189, 248, 0.1); padding: 3px 8px; border-radius: 4px; border: 1px solid rgba(56, 189, 248, 0.25);">📅 {m_date_val} • {m_time_val}</span>
+                            <span style="font-weight: 700; color: #0f172a; font-size: 1.05rem;">{tourney}</span>
+                            <span style="color: #64748b; font-size: 0.85rem; margin-left: 8px;">• {surf} Court • {rnd}</span>
+                            <span style="color: #1d4ed8; font-size: 0.82rem; margin-left: 12px; font-weight: 600; background: #eff6ff; padding: 3px 8px; border-radius: 6px; border: 1px solid #bfdbfe;">{m_date_val} • {m_time_val}</span>
                         </div>
                         <div>{card_status_badge}</div>
                     </div>
                     <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px;">
                         <div style="flex: 1; min-width: 220px;">
-                            <div style="font-size: 1.15rem; font-weight: 700; color: {'#38bdf8' if p1_prob >= 0.5 else '#cbd5e1'};">
-                                {p1} <span class="mono-num" style="font-size: 0.9rem; color: #94a3b8;">(@{p1_odds:.2f} | {p1_prob:.1%})</span>
+                            <div style="font-size: 1.12rem; font-weight: {'800' if p1_prob >= 0.5 else '600'}; color: {'#0f172a' if p1_prob >= 0.5 else '#475569'};">
+                                {p1} <span class="mono-num" style="font-size: 0.9rem; font-weight: 700; color: #2563eb;">@{p1_odds:.2f}</span> <span style="font-size: 0.82rem; color: #64748b;">({p1_prob:.1%})</span>
                             </div>
-                            <div style="font-size: 0.85rem; color: #64748b; margin: 2px 0;">vs</div>
-                            <div style="font-size: 1.15rem; font-weight: 700; color: {'#38bdf8' if p2_prob > 0.5 else '#cbd5e1'};">
-                                {p2} <span class="mono-num" style="font-size: 0.9rem; color: #94a3b8;">(@{p2_odds:.2f} | {p2_prob:.1%})</span>
+                            <div style="font-size: 0.8rem; font-weight: 600; color: #94a3b8; margin: 2px 0;">vs</div>
+                            <div style="font-size: 1.12rem; font-weight: {'800' if p2_prob > 0.5 else '600'}; color: {'#0f172a' if p2_prob > 0.5 else '#475569'};">
+                                {p2} <span class="mono-num" style="font-size: 0.9rem; font-weight: 700; color: #2563eb;">@{p2_odds:.2f}</span> <span style="font-size: 0.82rem; color: #64748b;">({p2_prob:.1%})</span>
                             </div>
                         </div>
                         <div style="text-align: right; min-width: 160px;">
-                            <div style="font-size: 0.78rem; color: #94a3b8; text-transform: uppercase;">Predicted Winner</div>
-                            <div style="font-size: 1.25rem; font-weight: 800; color: #10b981;">{pred_winner}</div>
-                            <div style="font-size: 0.82rem; color: #38bdf8;">Confidence: {win_prob_pct:.1f}%</div>
+                            <div style="font-size: 0.75rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Projected Winner</div>
+                            <div style="font-size: 1.25rem; font-weight: 800; color: #059669;">{pred_winner}</div>
+                            <div style="font-size: 0.82rem; color: #2563eb; font-weight: 600;">{win_prob_pct:.1f}% probability</div>
                         </div>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
 
-            # Display Top 3 Simple Banker Picks with Real-Time Settlement Ticks
-            if top_picks:
-                p_cols = st.columns(3)
-                badges_titles = ["🥇 Banker Pick 1", "🥈 Spread Pick 2", "🥉 Value Pick 3"]
-                badge_styles = ["badge-emerald", "badge-blue", "badge-amber"]
+                # Display Top 3 Picks with Real-Time Settlement Ticks
+                if top_picks:
+                    p_cols = st.columns(3)
+                    badges_titles = ["Banker Pick", "Spread Pick", "Value Edge"]
+                    badge_styles = ["badge-emerald", "badge-blue", "badge-amber"]
 
                 for p_idx, pick in enumerate(top_picks):
                     with p_cols[p_idx]:
@@ -749,23 +775,23 @@ with tab_today:
                         badge_txt = p_grade["badge"]
 
                         if settle == "WON":
-                            box_style = "background: #0f2420; border: 1px solid rgba(16, 185, 129, 0.45); border-radius: 8px; padding: 12px 14px; margin-bottom: 8px;"
+                            box_style = "background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 12px 14px; margin-bottom: 8px;"
                             badge_markup = f'<span class="badge-pill badge-emerald">{badge_txt}</span>'
-                            action_markup = '<div style="background: rgba(16, 185, 129, 0.15); color: #10b981; font-weight: 800; font-size: 0.82rem; text-align: center; padding: 6px; border-radius: 6px; border: 1px solid rgba(16,185,129,0.3);">✅ CASHED (WON)</div>'
+                            action_markup = '<div style="background: #dcfce7; color: #15803d; font-weight: 800; font-size: 0.82rem; text-align: center; padding: 6px; border-radius: 6px; border: 1px solid #86efac;">WON</div>'
                         elif settle == "FAILED":
-                            box_style = "background: #26151c; border: 1px solid rgba(244, 63, 94, 0.45); border-radius: 8px; padding: 12px 14px; margin-bottom: 8px;"
+                            box_style = "background: #fff1f2; border: 1px solid #fecdd3; border-radius: 8px; padding: 12px 14px; margin-bottom: 8px;"
                             badge_markup = f'<span class="badge-pill badge-rose">{badge_txt}</span>'
-                            action_markup = '<div style="background: rgba(244, 63, 94, 0.15); color: #f43f5e; font-weight: 800; font-size: 0.82rem; text-align: center; padding: 6px; border-radius: 6px; border: 1px solid rgba(244,63,94,0.3);">❌ BUSTED (LOST)</div>'
+                            action_markup = '<div style="background: #ffe4e6; color: #be123c; font-weight: 800; font-size: 0.82rem; text-align: center; padding: 6px; border-radius: 6px; border: 1px solid #fda4af;">LOST</div>'
                         elif settle == "VOID":
-                            box_style = "background: #181d28; border: 1px solid rgba(148, 163, 184, 0.35); border-radius: 8px; padding: 12px 14px; margin-bottom: 8px;"
+                            box_style = "background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px 14px; margin-bottom: 8px;"
                             badge_markup = f'<span class="badge-pill badge-slate">{badge_txt}</span>'
-                            action_markup = '<div style="background: rgba(148, 163, 184, 0.15); color: #94a3b8; font-weight: 800; font-size: 0.82rem; text-align: center; padding: 6px; border-radius: 6px; border: 1px solid rgba(148,163,184,0.3);">⚠️ REFUNDED (VOID)</div>'
+                            action_markup = '<div style="background: #f1f5f9; color: #475569; font-weight: 800; font-size: 0.82rem; text-align: center; padding: 6px; border-radius: 6px; border: 1px solid #cbd5e1;">VOIDED</div>'
                         elif settle == "IN_PLAY":
-                            box_style = "background: #241c14; border: 1px solid rgba(245, 158, 11, 0.45); border-radius: 8px; padding: 12px 14px; margin-bottom: 8px;"
+                            box_style = "background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 12px 14px; margin-bottom: 8px;"
                             badge_markup = f'<span class="badge-pill badge-amber">{badge_txt}</span>'
-                            action_markup = '<div style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; font-weight: 800; font-size: 0.82rem; text-align: center; padding: 6px; border-radius: 6px; border: 1px solid rgba(245,158,11,0.3);">🎾 ACTIVE ON COURT</div>'
+                            action_markup = '<div style="background: #fef3c7; color: #b45309; font-weight: 800; font-size: 0.82rem; text-align: center; padding: 6px; border-radius: 6px; border: 1px solid #fcd34d;">IN PLAY</div>'
                         else:
-                            box_style = "background: #182030; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 12px 14px; margin-bottom: 8px;"
+                            box_style = "background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px; margin-bottom: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);"
                             badge_markup = f'<span class="badge-pill {badge_styles[p_idx]}">{badges_titles[p_idx]}</span>'
                             action_markup = None
 
@@ -773,17 +799,17 @@ with tab_today:
                         <div style="{box_style}">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
                                 {badge_markup}
-                                <span class="mono-num" style="font-weight: 700; color: #10b981;">@{pick['fair_odds']:.2f}</span>
+                                <span class="mono-num" style="font-weight: 800; color: #059669;">@{pick['fair_odds']:.2f}</span>
                             </div>
-                            <div style="font-size: 0.95rem; font-weight: 700; color: #ffffff; margin-bottom: 4px;">{pick['title']}</div>
-                            <div style="font-size: 0.82rem; color: #94a3b8; margin-bottom: 8px;">{pick['explanation']}</div>
+                            <div style="font-size: 0.95rem; font-weight: 700; color: #0f172a; margin-bottom: 4px;">{pick['title']}</div>
+                            <div style="font-size: 0.82rem; color: #64748b; margin-bottom: 8px;">{pick['explanation']}</div>
                         </div>
                         """, unsafe_allow_html=True)
 
                         if action_markup:
                             st.markdown(action_markup, unsafe_allow_html=True)
                         else:
-                            if st.button(f"➕ Add to Slip", key=f"btn_add_slip_{idx}_{p_idx}", use_container_width=True):
+                            if st.button(f"+ Add to Slip", key=f"btn_add_slip_{idx}_{p_idx}", use_container_width=True):
                                 add_to_betslip(
                                     match=f"{p1} vs {p2}",
                                     market=pick["market"],
@@ -805,7 +831,7 @@ with tab_today:
 
 with tab_banker_tracker:
     st.subheader("Banker Picks Outcome & Results Settlement Tracker")
-    st.markdown("Dedicated verification ledger auditing **strictly the system's #1 Banker Pick** per match with chronological date segmentation, void/walkover protection, and institutional ledger auditing.")
+    st.markdown("Dedicated verification ledger tracking **the system's selected Banker Pick** per match with chronological date segmentation, void/walkover handling, and transparent settlement auditing.")
 
     # Top Control Bar: Date Selector & Sync Button
     dates_avail = tracker.get_all_available_prediction_dates()
@@ -815,35 +841,35 @@ with tab_banker_tracker:
     date_options = []
     # Make sure Today is listed first so the dashboard immediately opens to Today's genuine results
     if today_iso in dates_avail:
-        date_options.append(f"📅 {today_iso} (Today)")
+        date_options.append(f"{today_iso} (Today)")
     for d in dates_avail:
         if d == today_iso:
             continue
         elif d == tomorrow_iso:
-            date_options.append(f"📅 {d} (Tomorrow / Upcoming)")
+            date_options.append(f"{d} (Tomorrow)")
         else:
-            date_options.append(f"📅 {d}")
+            date_options.append(f"{d}")
     if not date_options and dates_avail:
-        date_options = [f"📅 {d}" for d in dates_avail]
-    date_options.append("🌟 All Dates (Consolidated)")
+        date_options = [f"{d}" for d in dates_avail]
+    date_options.append("All Dates (Consolidated)")
 
     ctl_c1, ctl_c2, ctl_c3 = st.columns([4, 3, 3])
     with ctl_c1:
         chosen_date_label = st.selectbox(
-            "📅 Select Settlement Date",
+            "Select Settlement Date",
             options=date_options,
             index=0,
             help="Filter banker pick settlement ledger by specific date or view all dates consolidated from system start."
         )
     with ctl_c2:
-        if st.button("🔄 Sync Live Match Scores from ESPN", type="primary", use_container_width=True):
+        if st.button("Sync Live Scores from ESPN", type="primary", use_container_width=True):
             with st.spinner("Connecting to ESPN live scoreboards..."):
                 st.rerun()
     with ctl_c3:
         if st.session_state["demo_settlements"]:
-            if st.button("🔄 Reset Demo & Restore Pure Feed", use_container_width=True):
+            if st.button("Reset Simulation & Restore Feed", use_container_width=True):
                 st.session_state["demo_settlements"] = {}
-                st.toast("Restored pure live ESPN feed", icon="🔄")
+                st.toast("Restored live ESPN feed")
                 st.rerun()
 
     # Load Banker Picks Ledger for selected date
@@ -883,8 +909,8 @@ with tab_banker_tracker:
         with k_col2:
             st.markdown(f"""
             <div class="quant-card">
-                <div class="quant-label">✅ Won (Cashed)</div>
-                <div class="quant-val" style="color: #10b981;">{won_p}</div>
+                <div class="quant-label">Won (Cashed)</div>
+                <div class="quant-val" style="color: #059669;">{won_p}</div>
                 <div class="quant-sub">Successful Picks</div>
             </div>
             """, unsafe_allow_html=True)
@@ -892,8 +918,8 @@ with tab_banker_tracker:
         with k_col3:
             st.markdown(f"""
             <div class="quant-card">
-                <div class="quant-label">❌ Failed (Lost)</div>
-                <div class="quant-val" style="color: #f43f5e;">{failed_p}</div>
+                <div class="quant-label">Failed (Lost)</div>
+                <div class="quant-val" style="color: #e11d48;">{failed_p}</div>
                 <div class="quant-sub">Failed Picks</div>
             </div>
             """, unsafe_allow_html=True)
@@ -901,8 +927,8 @@ with tab_banker_tracker:
         with k_col4:
             st.markdown(f"""
             <div class="quant-card">
-                <div class="quant-label">⚠️ Voided</div>
-                <div class="quant-val" style="color: #94a3b8;">{void_p}</div>
+                <div class="quant-label">Voided</div>
+                <div class="quant-val" style="color: #64748b;">{void_p}</div>
                 <div class="quant-sub">Walkovers & Ret.</div>
             </div>
             """, unsafe_allow_html=True)
@@ -910,14 +936,14 @@ with tab_banker_tracker:
         with k_col5:
             st.markdown(f"""
             <div class="quant-card">
-                <div class="quant-label">⏳ Scheduled / In-Play</div>
-                <div class="quant-val" style="color: #38bdf8;">{pending_p}</div>
+                <div class="quant-label">Scheduled / In-Play</div>
+                <div class="quant-val" style="color: #2563eb;">{pending_p}</div>
                 <div class="quant-sub">Awaiting Outcomes</div>
             </div>
             """, unsafe_allow_html=True)
 
         with k_col6:
-            net_color = "#10b981" if net_units >= 0 else "#f43f5e"
+            net_color = "#059669" if net_units >= 0 else "#e11d48"
             st.markdown(f"""
             <div class="quant-card">
                 <div class="quant-label">Strike Rate & P&L</div>
@@ -927,8 +953,8 @@ with tab_banker_tracker:
             """, unsafe_allow_html=True)
 
         # Settlement Simulator Expander
-        with st.expander("🧪 Test Settlement Simulator (Verify Won, Failed & Walkover Voided)"):
-            st.caption("Use this simulation tool to test any match result and immediately verify how the system handles settlements.")
+        with st.expander("Test Settlement Simulator (Verify Won, Failed & Walkover Voided)"):
+            st.caption("Test how any match result settlements are graded by simulating final scores, retirements, or walkovers.")
             match_names = df_banker_ledger["match"].tolist()
             chosen_test_match = st.selectbox("Select Match to Test", options=match_names, index=0)
             test_row = df_banker_ledger[df_banker_ledger["match"] == chosen_test_match].iloc[0]
@@ -947,7 +973,7 @@ with tab_banker_tracker:
                         "p2_games": 7,
                         "total_games": 19,
                     }
-                    st.toast(f"Simulated {test_row['player1']} win 6-4 6-3", icon="✅")
+                    st.toast(f"Simulated {test_row['player1']} win 6-4 6-3")
                     st.rerun()
 
             with ts_c2:
@@ -962,7 +988,7 @@ with tab_banker_tracker:
                         "p2_games": 0,
                         "total_games": 0,
                     }
-                    st.toast(f"Simulated Walkover -> Selection VOIDED", icon="⚠️")
+                    st.toast("Simulated Walkover -> Selection VOIDED")
                     st.rerun()
 
             with ts_c3:
@@ -977,7 +1003,7 @@ with tab_banker_tracker:
                         "p2_games": 8,
                         "total_games": 10,
                     }
-                    st.toast(f"Simulated Retirement 2-6 0-2 ret", icon="⚠️")
+                    st.toast("Simulated Retirement 2-6 0-2 ret")
                     st.rerun()
 
             with ts_c4:
@@ -992,7 +1018,7 @@ with tab_banker_tracker:
                         "p2_games": 12,
                         "total_games": 16,
                     }
-                    st.toast(f"Simulated {test_row['player2']} win 6-2 6-2", icon="❌")
+                    st.toast(f"Simulated {test_row['player2']} win 6-2 6-2")
                     st.rerun()
 
         # Decluttering & Filtering Controls
@@ -1001,7 +1027,7 @@ with tab_banker_tracker:
         with flt_col1:
             banker_status_filter = st.selectbox(
                 "Filter by Settlement Outcome",
-                options=["All Banker Picks", "✅ Won Picks Only", "❌ Failed Picks Only", "⚠️ Voided Picks Only", "⏳ Scheduled / In-Play Only"]
+                options=["All Banker Picks", "Won Picks Only", "Failed Picks Only", "Voided Picks Only", "Scheduled / In-Play Only"]
             )
         with flt_col2:
             all_tourneys = ["All Tournaments"] + sorted(df_banker_ledger["tournament"].dropna().unique().tolist())
@@ -1010,7 +1036,7 @@ with tab_banker_tracker:
             b_surfaces = df_banker_ledger["surface"].dropna().unique().tolist()
             sel_b_surf = st.multiselect("Filter Court Surface", options=b_surfaces, default=b_surfaces, key="sel_b_surf_tracker")
         with flt_col4:
-            view_mode = st.radio("Display View", options=["📋 Compact Ledger Table", "🗂️ Grouped Cards by Tournament"], horizontal=True)
+            view_mode = st.radio("Display View", options=["Compact Ledger Table", "Grouped Cards by Tournament"], horizontal=True)
 
         # Apply Filters
         filtered_bankers = df_banker_ledger.copy()
@@ -1019,19 +1045,19 @@ with tab_banker_tracker:
         if sel_tourney != "All Tournaments":
             filtered_bankers = filtered_bankers[filtered_bankers["tournament"] == sel_tourney]
 
-        if banker_status_filter == "✅ Won Picks Only":
+        if banker_status_filter == "Won Picks Only":
             filtered_bankers = filtered_bankers[filtered_bankers["settlement"] == "WON"]
-        elif banker_status_filter == "❌ Failed Picks Only":
+        elif banker_status_filter == "Failed Picks Only":
             filtered_bankers = filtered_bankers[filtered_bankers["settlement"] == "FAILED"]
-        elif banker_status_filter == "⚠️ Voided Picks Only":
+        elif banker_status_filter == "Voided Picks Only":
             filtered_bankers = filtered_bankers[filtered_bankers["settlement"] == "VOID"]
-        elif banker_status_filter == "⏳ Scheduled / In-Play Only":
+        elif banker_status_filter == "Scheduled / In-Play Only":
             filtered_bankers = filtered_bankers[filtered_bankers["settlement"].isin(["PENDING", "IN_PLAY"])]
 
         st.markdown(f"#### Displaying **{len(filtered_bankers)}** Graded Banker Picks")
 
         # 1. Compact Ledger Table View
-        if view_mode == "📋 Compact Ledger Table":
+        if view_mode == "Compact Ledger Table":
             table_display = filtered_bankers[[
                 "date", "tournament", "match", "banker_pick", "fair_odds", "win_prob_pct", "status_badge", "actual_score", "profit_units"
             ]].copy()
@@ -1048,7 +1074,7 @@ with tab_banker_tracker:
         # 2. Grouped Cards by Tournament View
         else:
             for tourney_name, grp in filtered_bankers.groupby("tournament"):
-                with st.expander(f"🏆 {tourney_name} ({len(grp)} Banker Picks)", expanded=True):
+                with st.expander(f"{tourney_name} ({len(grp)} Banker Picks)", expanded=True):
                     for b_idx, b_row in grp.iterrows():
                         m_title = b_row["match"]
                         surf = b_row["surface"]
@@ -1062,48 +1088,48 @@ with tab_banker_tracker:
                         b_date = b_row["date"]
 
                         if settle == "WON":
-                            border_style = "border: 1px solid rgba(16, 185, 129, 0.45); background: #0f2420;"
+                            border_style = "border: 1px solid #bbf7d0; background: #f0fdf4;"
                             badge_html = f'<span class="badge-pill badge-emerald">{badge}</span>'
                         elif settle == "FAILED":
-                            border_style = "border: 1px solid rgba(244, 63, 94, 0.45); background: #26151c;"
+                            border_style = "border: 1px solid #fecdd3; background: #fff1f2;"
                             badge_html = f'<span class="badge-pill badge-rose">{badge}</span>'
                         elif settle == "VOID":
-                            border_style = "border: 1px solid rgba(148, 163, 184, 0.35); background: #181d28;"
+                            border_style = "border: 1px solid #e2e8f0; background: #f8fafc;"
                             badge_html = f'<span class="badge-pill badge-slate">{badge}</span>'
                         elif settle == "IN_PLAY":
-                            border_style = "border: 1px solid rgba(245, 158, 11, 0.45); background: #241c14;"
+                            border_style = "border: 1px solid #fef3c7; background: #fffbeb;"
                             badge_html = f'<span class="badge-pill badge-amber">{badge}</span>'
                         else:
-                            border_style = "border: 1px solid rgba(56, 189, 248, 0.25); background: #131a26;"
-                            badge_html = '<span class="badge-pill badge-blue">⏳ SCHEDULED • Awaiting Match</span>'
+                            border_style = "border: 1px solid #e2e8f0; background: #ffffff;"
+                            badge_html = '<span class="badge-pill badge-blue">Scheduled</span>'
 
                         st.markdown(f"""
-                        <div class="quant-card" style="{border_style} margin-bottom: 10px; padding: 12px 16px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 6px;">
+                        <div class="quant-card" style="{border_style} margin-bottom: 10px; padding: 14px 18px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">
                                 <div>
-                                    <span style="font-weight: 700; color: #f8fafc; font-size: 0.92rem;">{m_title}</span>
-                                    <span style="color: #94a3b8; font-size: 0.8rem; margin-left: 8px;">• {surf} Court • {rnd} • Date: {b_date}</span>
+                                    <span style="font-weight: 700; color: #0f172a; font-size: 0.95rem;">{m_title}</span>
+                                    <span style="color: #64748b; font-size: 0.82rem; margin-left: 8px;">• {surf} Court • {rnd} • Date: {b_date}</span>
                                 </div>
                                 <div>{badge_html}</div>
                             </div>
                             <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px;">
                                 <div style="flex: 1; min-width: 220px;">
-                                    <div style="font-size: 0.78rem; color: #f59e0b; text-transform: uppercase; font-weight: 700;">Banker Pick</div>
-                                    <div style="font-size: 1.1rem; font-weight: 800; color: #10b981;">{b_pick}</div>
-                                    <div class="mono-num" style="font-size: 0.82rem; color: #94a3b8;">
+                                    <div style="font-size: 0.75rem; color: #b45309; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">Banker Pick</div>
+                                    <div style="font-size: 1.1rem; font-weight: 800; color: #059669;">{b_pick}</div>
+                                    <div class="mono-num" style="font-size: 0.82rem; color: #475569;">
                                         Model: <b>{b_prob:.1f}%</b> | Odds: <b>@{b_odds:.2f}</b>
                                     </div>
                                 </div>
                                 <div style="text-align: right; min-width: 200px;">
-                                    <div style="font-size: 0.75rem; color: #94a3b8; text-transform: uppercase;">Match Settlement Status</div>
-                                    <div style="font-size: 0.88rem; font-weight: 600; color: #f8fafc;">{detail}</div>
+                                    <div style="font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">Settlement Status</div>
+                                    <div style="font-size: 0.9rem; font-weight: 600; color: #0f172a;">{detail}</div>
                                 </div>
                             </div>
                         </div>
                         """, unsafe_allow_html=True)
 
     else:
-        st.info("No banker pick records found for the selected date. Click 'Sync Live Match Scores from ESPN' above.")
+        st.info("No banker pick records found for the selected date. Click 'Sync Live Scores from ESPN' above.")
 
 
 # =============================================================================
@@ -1125,7 +1151,7 @@ with tab_sim:
             for _, r in df_sched.iterrows()
         ]
         chosen_sched = st.selectbox(
-            "⚡ Quick-Fill from Today's Scheduled Matches (Optional)",
+            "Quick-Fill from Scheduled Matches (Optional)",
             options=sched_options,
             index=0,
             help="Choose an upcoming tournament match to auto-fill players, surface, court conditions, and market odds instantly."
@@ -1194,7 +1220,7 @@ with tab_sim:
 
     tournament_input = prefill_match.get("tournament", "ATP/WTA Tour") if prefill_match else "ATP/WTA Tour"
 
-    btn_simulate = st.button("🚀 Run Full Quantitative Simulation", type="primary", use_container_width=True)
+    btn_simulate = st.button("Run Match Simulation", type="primary", use_container_width=True)
 
     if btn_simulate:
         if player1 == player2:
@@ -1202,7 +1228,7 @@ with tab_sim:
         elif pipeline is None:
             st.error("Prediction pipeline is not loaded.")
         else:
-            with st.spinner("Executing Feature Extraction, Dual GBDT Inference & Markov Point Simulation..."):
+            with st.spinner("Calculating matchup probabilities and derivative pricing..."):
                 pred = pipeline.predict_match(
                     player1=player1,
                     player2=player2,
@@ -1229,14 +1255,14 @@ with tab_sim:
                 st.markdown(f"""
                 <div class="quant-card">
                     <div class="quant-label">Predicted Winner</div>
-                    <div class="quant-val" style="color: #38bdf8;">{pred['predicted_winner']}</div>
-                    <div class="quant-sub">Ensemble Win Prob: {max(p1_prob, p2_prob):.1%}</div>
+                    <div class="quant-val" style="color: #2563eb;">{pred['predicted_winner']}</div>
+                    <div class="quant-sub">Win Probability: {max(p1_prob, p2_prob):.1%}</div>
                 </div>
                 """, unsafe_allow_html=True)
 
             with kpi_c2:
                 edge_val = pred.get("edge_pct", 0.0)
-                edge_color = "#10b981" if edge_val > 0 else "#94a3b8"
+                edge_color = "#059669" if edge_val > 0 else "#64748b"
                 st.markdown(f"""
                 <div class="quant-card">
                     <div class="quant-label">Market Edge</div>
@@ -1249,7 +1275,7 @@ with tab_sim:
                 st.markdown(f"""
                 <div class="quant-card">
                     <div class="quant-label">Kelly Allocation</div>
-                    <div class="quant-val" style="color: #f59e0b;">{pred.get('kelly_stake_pct', '0.0%')}</div>
+                    <div class="quant-val" style="color: #b45309;">{pred.get('kelly_stake_pct', '0.0%')}</div>
                     <div class="quant-sub">Bankroll: ${user_bankroll:,.0f}</div>
                 </div>
                 """, unsafe_allow_html=True)
@@ -1258,7 +1284,7 @@ with tab_sim:
                 st.markdown(f"""
                 <div class="quant-card">
                     <div class="quant-label">Expected Total Games</div>
-                    <div class="quant-val" style="color: #c084fc;">{pred['pred_total_games']:.1f}</div>
+                    <div class="quant-val" style="color: #7c3aed;">{pred['pred_total_games']:.1f}</div>
                     <div class="quant-sub">Speed Index: {'Fast (Indoor)' if is_indoor else 'Standard'}</div>
                 </div>
                 """, unsafe_allow_html=True)
@@ -1266,12 +1292,12 @@ with tab_sim:
             # Executive Summary: Top 3 Simple Pick Recommendations
             st.markdown("---")
             st.markdown("""
-            <div style="background: linear-gradient(135deg, #131c2e 0%, #0d121c 100%); padding: 18px 22px; border-radius: 12px; border: 1px solid rgba(56, 189, 248, 0.3); margin-bottom: 16px;">
+            <div style="background: #ffffff; padding: 18px 22px; border-radius: 10px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 16px;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <span style="font-weight: 800; color: #38bdf8; font-size: 1.3rem;">🎯 Top 3 Simple Banker Picks (Plain Terms)</span>
-                    <span class="badge-pill badge-emerald">Highest Confidence</span>
+                    <span style="font-weight: 700; color: #0f172a; font-size: 1.15rem;">Top 3 Match Selections</span>
+                    <span class="badge-pill badge-emerald">Ranked by Confidence</span>
                 </div>
-                <p style="margin: 4px 0 0 0; color: #94a3b8; font-size: 0.9rem;">
+                <p style="margin: 4px 0 0 0; color: #64748b; font-size: 0.85rem;">
                     Derived directly from calibrated probability distributions across match winner, set handicap, and game lines.
                 </p>
             </div>
@@ -1280,7 +1306,7 @@ with tab_sim:
             top_sim_picks = pipeline.extract_top_three_picks(pred)
             if top_sim_picks:
                 sim_p_cols = st.columns(3)
-                badges_sim = ["🥇 Banker Pick 1", "🥈 Spread Pick 2", "🥉 Value Pick 3"]
+                badges_sim = ["Banker Pick", "Spread Pick", "Value Edge"]
                 badge_sim_styles = ["badge-emerald", "badge-blue", "badge-amber"]
 
                 for s_i, sp in enumerate(top_sim_picks):
@@ -1289,19 +1315,19 @@ with tab_sim:
                         <div class="quant-card" style="height: 100%;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                                 <span class="badge-pill {badge_sim_styles[s_i]}">{badges_sim[s_i]}</span>
-                                <span class="mono-num" style="font-weight: 700; color: #10b981;">@{sp['fair_odds']:.2f}</span>
+                                <span class="mono-num" style="font-weight: 700; color: #059669;">@{sp['fair_odds']:.2f}</span>
                             </div>
-                            <div style="font-size: 1.15rem; font-weight: 700; color: #ffffff; margin-bottom: 4px;">{sp['title']}</div>
-                            <div class="mono-num" style="font-size: 1.4rem; font-weight: 800; color: #38bdf8; margin-bottom: 6px;">
+                            <div style="font-size: 1.1rem; font-weight: 700; color: #0f172a; margin-bottom: 4px;">{sp['title']}</div>
+                            <div class="mono-num" style="font-size: 1.35rem; font-weight: 800; color: #2563eb; margin-bottom: 6px;">
                                 {sp['win_prob_pct']}%
                             </div>
-                            <div style="font-size: 0.85rem; color: #cbd5e1; line-height: 1.45; margin-bottom: 12px;">
+                            <div style="font-size: 0.85rem; color: #475569; line-height: 1.45; margin-bottom: 12px;">
                                 {sp['explanation']}
                             </div>
                         </div>
                         """, unsafe_allow_html=True)
 
-                        if st.button("➕ Add to Betslip", key=f"btn_add_sim_{s_i}", use_container_width=True):
+                        if st.button("Add to Betslip", key=f"btn_add_sim_{s_i}", use_container_width=True):
                             add_to_betslip(
                                 match=f"{player1} vs {player2}",
                                 market=sp["market"],
@@ -1313,7 +1339,7 @@ with tab_sim:
 
             # Multi-Market Output Grid
             st.markdown("---")
-            st.markdown("### Specialized Derivative Market Breakdowns")
+            st.markdown("### Specialized Market Breakdowns")
 
             m_col1, m_col2 = st.columns(2)
 
@@ -1361,11 +1387,11 @@ with tab_sim:
                     x=list(score_data.keys()),
                     y=[v * 100.0 for v in score_data.values()],
                     color=list(score_data.keys()),
-                    color_discrete_sequence=["#38bdf8", "#60a5fa", "#f87171", "#f43f5e"],
+                    color_discrete_sequence=["#2563eb", "#60a5fa", "#f87171", "#e11d48"],
                     labels={"x": "Scoreline", "y": "Probability (%)"},
                     title="Exact Set Score Distribution",
                 )
-                fig_scores.update_layout(height=220, showlegend=False, margin=dict(l=20, r=20, t=35, b=20), paper_bgcolor="rgba(0,0,0,0)")
+                fig_scores.update_layout(height=220, showlegend=False, margin=dict(l=20, r=20, t=35, b=20), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font=dict(color="#0f172a"))
                 st.plotly_chart(fig_scores, use_container_width=True)
 
                 # 5. Total Match Games & Over Lines
@@ -1398,19 +1424,19 @@ with tab_sim:
 
 
 # =============================================================================
-# TAB 3: SURFACE ELO LEADERBOARDS
+# TAB 4: PLAYER RANKINGS & SURFACE ELO
 # =============================================================================
 
 with tab_elo:
-    st.subheader("Official Surface-Specific Elo Ratings Leaderboards")
-    st.markdown("Chronologically computed dynamic Elo ratings tracking over 1,000 professional players across surface environments.")
+    st.subheader("Player Surface Rankings & Elo Ratings")
+    st.markdown("Dynamic surface-specific ratings tracking professional players across Hard, Clay, and Grass courts.")
 
     if not df_elo.empty:
         c_surf, c_search, c_limit = st.columns([2, 3, 2])
         with c_surf:
             selected_surface = st.selectbox("Surface Leaderboard", ["Overall", "Hard", "Clay", "Grass"])
         with c_search:
-            search_query = st.text_input("🔍 Search Player Name", "")
+            search_query = st.text_input("Search Player Name", "")
         with c_limit:
             top_limit = st.slider("Display Top N", 10, 100, 25, 5)
 
@@ -1439,9 +1465,15 @@ with tab_elo:
             y="Player Name",
             orientation="h",
             color=chart_col,
-            color_continuous_scale="Viridis",
+            color_continuous_scale="Blues",
         )
-        fig_elo.update_layout(yaxis=dict(autorange="reversed"), height=420, paper_bgcolor="rgba(0,0,0,0)")
+        fig_elo.update_layout(
+            yaxis=dict(autorange="reversed"),
+            height=420,
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            font=dict(color="#0f172a"),
+        )
         st.plotly_chart(fig_elo, use_container_width=True)
 
         st.markdown(f"#### Full Leaderboard Table ({selected_surface})")
@@ -1451,54 +1483,12 @@ with tab_elo:
 
 
 # =============================================================================
-# TAB 4: MODEL ARCHITECTURE & FEATURE IMPORTANCE
-# =============================================================================
-
-with tab_model:
-    st.subheader("Dual Ensemble Architecture & Feature Engineering Attribution")
-    st.markdown("Detailed breakdown of the regularized machine learning framework (LightGBM + XGBoost + SurfaceElo stacking) and feature importance.")
-
-    df_imp = load_feature_importance_data()
-
-    if not df_imp.empty:
-        f_top = st.slider("Top Features to Display", 10, 25, 15, 1)
-        sub_imp = df_imp.head(f_top)
-
-        fig_imp = px.bar(
-            sub_imp,
-            x="importance_pct",
-            y="feature",
-            orientation="h",
-            color="importance_pct",
-            color_continuous_scale="Blues",
-            labels={"importance_pct": "Relative Gain Contribution (%)", "feature": "Feature Name"},
-            title=f"Top {f_top} Most Predictive Features (Information Gain)",
-        )
-        fig_imp.update_layout(yaxis=dict(autorange="reversed"), height=450, paper_bgcolor="rgba(0,0,0,0)")
-        st.plotly_chart(fig_imp, use_container_width=True)
-
-        st.markdown("#### Predictive Feature Groups")
-        st.markdown("""
-        1. **Dual Surface & Dynamic Elo:** Pre-match Surface Elo, Overall Elo, Blended Elo, and differential spread.
-        2. **Court Pace Index (CPI) & Environmental:** Indoor court status, estimated court pace index (20-45), pace hold boosts.
-        3. **Serve & Return Bayesian Rates:** Opponent-adjusted service hold %, return win %, break point save & conversion rates.
-        4. **Form & Momentum:** Rolling win rates over last 5, 10, and 20 matches, surface-specific form, streak lengths.
-        5. **Decayed Head-to-Head:** Recency-weighted historical matchup dominance and total prior encounters.
-        6. **Fatigue & Schedule:** Days since last match, matches/sets played in last 7 and 14 days, back-to-back indicators.
-        7. **Biometrics & Physical Context:** Height differentials, dominant hand matchups, and age trajectory.
-        8. **Tempo & Hold Expectations:** Expected combined hold %, tiebreak probabilities, and projected games per set.
-        """)
-    else:
-        st.info("Feature importance data unavailable. Train MatchWinnerModel first.")
-
-
-# =============================================================================
-# TAB 5: PORTFOLIO RISK & MONTE CARLO SIMULATOR
+# TAB 5: BANKROLL GROWTH & DRAWDOWN CALCULATOR
 # =============================================================================
 
 with tab_risk:
-    st.subheader("Institutional Bankroll Risk Management & Monte Carlo Simulation")
-    st.markdown("Simulate 1,000 synthetic bankroll trajectories under fractional Kelly staking to project drawdown risk, growth velocity, and capital preservation.")
+    st.subheader("Bankroll Growth & Drawdown Calculator")
+    st.markdown("Project long-term portfolio growth, expected drawdown risk, and variance across sequential matches under fractional Kelly staking.")
 
     r_col1, r_col2, r_col3, r_col4 = st.columns(4)
     with r_col1:
@@ -1510,8 +1500,8 @@ with tab_risk:
     with r_col4:
         sim_stake_pct = st.slider("Fixed Stake Size (% of Bankroll)", 0.5, 4.0, 1.5, 0.25)
 
-    if st.button("🎲 Run Monte Carlo Trajectory Simulation", type="primary"):
-        with st.spinner("Simulating 1,000 independent portfolio trajectories..."):
+    if st.button("Run Portfolio Simulation", type="primary"):
+        with st.spinner("Simulating portfolio trajectories..."):
             sim_res = risk_manager.simulate_bankroll(
                 n_bets=sim_bets,
                 avg_win_prob=sim_win_rate,
@@ -1555,7 +1545,7 @@ with tab_risk:
             fig_mc.add_trace(go.Scatter(
                 y=df_paths[col_name],
                 mode='lines',
-                line=dict(width=1.2, color="rgba(56, 189, 248, 0.45)"),
+                line=dict(width=1.2, color="rgba(37, 99, 235, 0.15)"),
                 showlegend=False,
             ))
 
@@ -1563,15 +1553,17 @@ with tab_risk:
         fig_mc.add_trace(go.Scatter(
             y=df_paths.median(axis=1),
             mode='lines',
-            line=dict(width=3.5, color="#f59e0b"),
+            line=dict(width=3.2, color="#2563eb"),
             name="Median Trajectory",
         ))
 
         fig_mc.update_layout(
-            title="500 Simulated Bankroll Trajectories (Quarter Kelly Allocation)",
+            title="500 Simulated Portfolio Trajectories",
             xaxis_title="Sequential Matches Bet",
             yaxis_title="Portfolio Equity ($)",
             height=450,
             paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            font=dict(color="#0f172a"),
         )
         st.plotly_chart(fig_mc, use_container_width=True)
