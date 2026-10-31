@@ -84,10 +84,13 @@ class TennisResultsTracker:
                             continue
 
                         for comp in grp.get("competitions", []):
+                            c_date_raw = comp.get("date", ev.get("date", ""))
+                            comp_date_iso = str(c_date_raw)[:10] if c_date_raw else ""
                             status_type = comp.get("status", {}).get("type", {})
                             status_name = status_type.get("name", "STATUS_SCHEDULED")
                             status_desc = str(status_type.get("description", "")).lower()
                             status_detail = str(status_type.get("detail", "")).lower()
+                            status_detail_orig = str(status_type.get("detail", "") or status_type.get("shortDetail", "")).strip()
 
                             notes = comp.get("notes", [])
                             note_text = " ".join([n.get("text", "") for n in notes if isinstance(n, dict)]).strip()
@@ -187,6 +190,8 @@ class TennisResultsTracker:
                                 "player2": p2_raw,
                                 "p1_norm": self.normalize_name(p1_raw),
                                 "p2_norm": self.normalize_name(p2_raw),
+                                "match_date": comp_date_iso,
+                                "match_time": status_detail_orig,
                                 "status": status_label,
                                 "winner": winner_name,
                                 "winner_norm": self.normalize_name(winner_name) if winner_name else None,
@@ -210,27 +215,47 @@ class TennisResultsTracker:
         p1: str,
         p2: str,
         live_results: List[Dict[str, Any]],
+        match_date: Optional[str] = None,
     ) -> Optional[Dict[str, Any]]:
         """Find the corresponding live result for a predicted matchup."""
         p1_n = self.normalize_name(p1)
         p2_n = self.normalize_name(p2)
 
-        # 1. Exact normalized match
+        # 1. Exact normalized match with matching match_date
+        if match_date:
+            for res in live_results:
+                if res.get("match_date") == match_date:
+                    rp1 = res["p1_norm"]
+                    rp2 = res["p2_norm"]
+                    if (p1_n == rp1 and p2_n == rp2) or (p1_n == rp2 and p2_n == rp1):
+                        return res
+
+        # 2. Exact normalized match (any date)
         for res in live_results:
             rp1 = res["p1_norm"]
             rp2 = res["p2_norm"]
             if (p1_n == rp1 and p2_n == rp2) or (p1_n == rp2 and p2_n == rp1):
                 return res
 
-        # 2. Surname matching
+        # 3. Surname matching with matching match_date
         p1_last = p1_n.split()[-1] if p1_n else ""
         p2_last = p2_n.split()[-1] if p2_n else ""
 
-        for res in live_results:
-            rp1 = res["p1_norm"]
-            rp2 = res["p2_norm"]
-            if (p1_last in rp1 and p2_last in rp2) or (p1_last in rp2 and p2_last in rp1):
-                return res
+        if match_date and p1_last and p2_last:
+            for res in live_results:
+                if res.get("match_date") == match_date:
+                    rp1 = res["p1_norm"]
+                    rp2 = res["p2_norm"]
+                    if (p1_last in rp1 and p2_last in rp2) or (p1_last in rp2 and p2_last in rp1):
+                        return res
+
+        # 4. Surname matching (any date)
+        if p1_last and p2_last:
+            for res in live_results:
+                rp1 = res["p1_norm"]
+                rp2 = res["p2_norm"]
+                if (p1_last in rp1 and p2_last in rp2) or (p1_last in rp2 and p2_last in rp1):
+                    return res
 
         return None
 
@@ -520,6 +545,15 @@ class TennisResultsTracker:
                 m = re.search(r"predictions_(\d{4})(\d{2})(\d{2})\.csv", p.name)
                 if m:
                     dates.add(f"{m.group(1)}-{m.group(2)}-{m.group(3)}")
+                try:
+                    df_d = pd.read_csv(p, nrows=200)
+                    if "match_date" in df_d.columns:
+                        for d_val in df_d["match_date"].dropna().unique():
+                            d_str = str(d_val).strip()
+                            if re.match(r"^\d{4}-\d{2}-\d{2}$", d_str):
+                                dates.add(d_str)
+                except Exception:
+                    pass
         hist_p = live_dir / "banker_settled_history.csv"
         if hist_p.exists():
             try:
@@ -565,10 +599,9 @@ class TennisResultsTracker:
             specific_file = live_dir / f"predictions_{date_clean}.csv"
             if specific_file.exists():
                 target_files.append((selected_date, specific_file))
-            else:
-                pred_files = sorted(live_dir.glob("predictions_*.csv"))
-                if pred_files:
-                    target_files.append((selected_date, pred_files[-1]))
+            for pf in sorted(live_dir.glob("predictions_*.csv")):
+                if pf != specific_file:
+                    target_files.append((selected_date, pf))
         elif predictions_file:
             pf = Path(predictions_file)
             m = re.search(r"predictions_(\d{4})(\d{2})(\d{2})\.csv", pf.name)
@@ -602,13 +635,18 @@ class TennisResultsTracker:
                 rnd = str(row_dict.get("round", "R32"))
                 m_date = str(row_dict.get("match_date", d_str))
 
+                # Strict date segmentation: do not show matches from other dates when filtering by date
+                if selected_date and selected_date.lower() not in ("all", "all dates (consolidated)"):
+                    if m_date != selected_date:
+                        continue
+
                 top_picks = TennisPredictionPipeline.extract_top_three_picks(row_dict)
                 if not top_picks:
                     continue
                 banker = top_picks[0]
 
-                # Match against live results
-                m_res = self.match_prediction_with_live_result(p1, p2, live_results)
+                # Match against live results with exact match date priority
+                m_res = self.match_prediction_with_live_result(p1, p2, live_results, match_date=m_date)
                 grade = self.grade_prediction_pick(banker, p1, p2, m_res)
 
                 banker_rows.append({

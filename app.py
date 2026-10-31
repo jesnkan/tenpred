@@ -12,7 +12,8 @@ Institutional-grade ATP & WTA forecasting terminal featuring:
 from __future__ import annotations
 
 import json
-from datetime import datetime
+import re
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -541,12 +542,25 @@ with tab_today:
         if st.button("📡 Re-Scrape Daily Fixtures from ESPN", type="primary", use_container_width=True):
             with st.spinner("Fetching latest live scheduled fixtures and running ensemble scoring..."):
                 fetcher = TennisLiveFetcher()
-                live_df = fetcher.fetch_espn_daily_fixtures(tour="both", only_scheduled=True)
+                runner = DailyRunner()
+                live_df = fetcher.fetch_espn_daily_fixtures(tour="both", only_scheduled=False)
                 if not live_df.empty:
-                    fetcher.save_live_fixtures(live_df, "data/live/upcoming_fixtures.csv")
-                    runner = DailyRunner()
-                    runner.run_daily(fixtures_file="data/live/upcoming_fixtures.csv")
-                    st.success(f"Fetched and evaluated {len(live_df)} scheduled matches!")
+                    dates_in_feed = live_df["match_date"].dropna().unique()
+                    total_saved = 0
+                    for d_val in dates_in_feed:
+                        df_d = live_df[live_df["match_date"] == d_val].copy()
+                        if not df_d.empty:
+                            preds_d = runner.predict_upcoming(df_d)
+                            tag = str(d_val).replace("-", "")
+                            preds_d.to_csv(f"data/live/predictions_{tag}.csv", index=False)
+                            total_saved += len(preds_d)
+                    
+                    # Persist upcoming scheduled matches
+                    sched_df = live_df[live_df["status"].isin(["STATUS_SCHEDULED", "STATUS_IN_PROGRESS"])]
+                    if not sched_df.empty:
+                        fetcher.save_live_fixtures(sched_df, "data/live/upcoming_fixtures.csv")
+
+                    st.success(f"Fetched, partitioned, and evaluated {total_saved} matches across {len(dates_in_feed)} dates!")
                     st.rerun()
                 else:
                     st.warning("No new matches found currently on ESPN live board.")
@@ -556,101 +570,171 @@ with tab_today:
             with st.spinner("Updating live scoreboards..."):
                 st.rerun()
 
-    # Load Latest Predictions
+    # Load Predictions with Date Segmentation
     live_dir = Path("data/live")
-    pred_files = sorted(live_dir.glob("predictions_*.csv"))
+    today_iso = datetime.now().strftime("%Y-%m-%d")
+    tomorrow_iso = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
 
-    if pred_files:
-        latest_file = pred_files[-1]
-        df_today = pd.read_csv(latest_file)
-        st.caption(f"Loaded active predictions from `{latest_file.name}` ({len(df_today)} matches evaluated)")
+    avail_dates = tracker.get_all_available_prediction_dates()
 
-        # Filter bar
-        flt_c1, flt_c2, flt_c3 = st.columns(3)
-        with flt_c1:
-            edge_threshold = st.slider("Min Edge (%)", 0.0, 15.0, 0.0, 0.5)
-        with flt_c2:
-            surfaces_avail = df_today["surface"].dropna().unique().tolist()
-            sel_surfaces = st.multiselect("Court Surface", options=surfaces_avail, default=surfaces_avail)
-        with flt_c3:
-            only_value_bets = st.checkbox("Show Only Actionable +EV Bets", value=False)
+    if avail_dates:
+        date_display_map = {}
+        for d in avail_dates:
+            if d == today_iso:
+                date_display_map[f"📅 Today's Matches ({d})"] = d
+            elif d == tomorrow_iso:
+                date_display_map[f"📅 Tomorrow's Matches ({d})"] = d
+            else:
+                date_display_map[f"📅 Matches for {d}"] = d
+        date_display_map["🌟 All Matches (Consolidated)"] = "all"
 
-        # Apply Filters
-        filtered_df = df_today.copy()
-        if sel_surfaces:
-            filtered_df = filtered_df[filtered_df["surface"].isin(sel_surfaces)]
-        if only_value_bets and "recommended_bet" in filtered_df.columns:
-            filtered_df = filtered_df[filtered_df["recommended_bet"] != "Pass (No Value)"]
-        if "edge_pct" in filtered_df.columns:
-            filtered_df = filtered_df[filtered_df["edge_pct"] >= edge_threshold]
+        tab1_options = list(date_display_map.keys())
 
-        st.markdown(f"#### Displaying **{len(filtered_df)}** Evaluated Matches")
+        # Find default index (Today if present)
+        def_tab1_idx = 0
+        for idx, opt in enumerate(tab1_options):
+            if today_iso in opt:
+                def_tab1_idx = idx
+                break
 
-        # Interactive Cards View for Matches
-        for idx, row in filtered_df.iterrows():
-            p1 = str(row["player1"])
-            p2 = str(row["player2"])
-            tourney = str(row.get("tournament", "Tour Event"))
-            surf = str(row.get("surface", "Hard"))
-            rnd = str(row.get("round", "R32"))
-            p1_prob = float(row.get("p1_win_prob", 0.5))
-            p2_prob = 1.0 - p1_prob
-            pred_winner = p1 if p1_prob >= 0.50 else p2
-            win_prob_pct = max(p1_prob, p2_prob) * 100.0
+        st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True)
+        sel_date_label = st.radio(
+            "📅 Select Match Schedule & Prediction Date",
+            options=tab1_options,
+            index=def_tab1_idx,
+            horizontal=True,
+            help="Filter predictions by today's active schedule, tomorrow's upcoming fixtures, or all consolidated matches."
+        )
+        chosen_date_tab1 = date_display_map[sel_date_label]
 
-            p1_odds = float(row.get("p1_odds", 1.90)) if not pd.isna(row.get("p1_odds")) else float(row.get("p1_fair_odds", 1.90))
-            p2_odds = float(row.get("p2_odds", 1.90)) if not pd.isna(row.get("p2_odds")) else float(row.get("p2_fair_odds", 1.90))
+        # Load appropriate predictions
+        if chosen_date_tab1 == "all":
+            dfs = []
+            for pf in sorted(live_dir.glob("predictions_*.csv")):
+                try:
+                    dfs.append(pd.read_csv(pf))
+                except Exception:
+                    pass
+            df_today = pd.concat(dfs, ignore_index=True).drop_duplicates(subset=["match_date", "player1", "player2"]).reset_index(drop=True) if dfs else pd.DataFrame()
+            st.caption(f"Loaded all combined predictions ({len(df_today)} matches evaluated)")
+        else:
+            date_clean = chosen_date_tab1.replace("-", "")
+            specific_file = live_dir / f"predictions_{date_clean}.csv"
+            if specific_file.exists():
+                df_today = pd.read_csv(specific_file)
+                st.caption(f"Loaded predictions for `{chosen_date_tab1}` from `{specific_file.name}` ({len(df_today)} matches evaluated)")
+            else:
+                dfs = []
+                for pf in sorted(live_dir.glob("predictions_*.csv")):
+                    try:
+                        df_tmp = pd.read_csv(pf)
+                        if "match_date" in df_tmp.columns:
+                            matched = df_tmp[df_tmp["match_date"] == chosen_date_tab1]
+                            if not matched.empty:
+                                dfs.append(matched)
+                    except Exception:
+                        pass
+                if dfs:
+                    df_today = pd.concat(dfs, ignore_index=True).drop_duplicates(subset=["match_date", "player1", "player2"]).reset_index(drop=True)
+                    st.caption(f"Loaded predictions for `{chosen_date_tab1}` ({len(df_today)} matches evaluated)")
+                else:
+                    df_today = pd.DataFrame()
 
-            # Match with live ESPN results
-            m_res = tracker.match_prediction_with_live_result(p1, p2, live_espn_results)
-            if m_res:
-                st_name = m_res.get("status", "SCHEDULED")
-                sc_str = m_res.get("score", "")
-                wn_str = m_res.get("winner", "")
-                if st_name == "FINAL":
-                    card_status_badge = f'<span class="badge-pill badge-emerald">🏁 FINAL • {sc_str} (Winner: {wn_str})</span>'
-                elif st_name == "WALKOVER":
-                    card_status_badge = f'<span class="badge-pill badge-slate">⚠️ WALKOVER (W/O) • {wn_str} adv</span>'
-                elif st_name == "RETIRED":
-                    card_status_badge = f'<span class="badge-pill badge-amber">⚠️ RETIRED ({sc_str}) • {wn_str} won</span>'
-                elif st_name == "IN_PROGRESS":
-                    card_status_badge = f'<span class="badge-pill badge-amber">🎾 LIVE ON COURT • {sc_str}</span>'
+        if not df_today.empty:
+            # Filter bar
+            flt_c1, flt_c2, flt_c3 = st.columns(3)
+            with flt_c1:
+                edge_threshold = st.slider("Min Edge (%)", 0.0, 15.0, 0.0, 0.5)
+            with flt_c2:
+                surfaces_avail = df_today["surface"].dropna().unique().tolist()
+                sel_surfaces = st.multiselect("Court Surface", options=surfaces_avail, default=surfaces_avail)
+            with flt_c3:
+                only_value_bets = st.checkbox("Show Only Actionable +EV Bets", value=False)
+
+            # Apply Filters
+            filtered_df = df_today.copy()
+            if sel_surfaces:
+                filtered_df = filtered_df[filtered_df["surface"].isin(sel_surfaces)]
+            if only_value_bets and "recommended_bet" in filtered_df.columns:
+                filtered_df = filtered_df[filtered_df["recommended_bet"] != "Pass (No Value)"]
+            if "edge_pct" in filtered_df.columns:
+                filtered_df = filtered_df[filtered_df["edge_pct"] >= edge_threshold]
+
+            st.markdown(f"#### Displaying **{len(filtered_df)}** Evaluated Matches for **{sel_date_label}**")
+
+            # Interactive Cards View for Matches
+            for idx, row in filtered_df.iterrows():
+                p1 = str(row["player1"])
+                p2 = str(row["player2"])
+                tourney = str(row.get("tournament", "Tour Event"))
+                surf = str(row.get("surface", "Hard"))
+                rnd = str(row.get("round", "R32"))
+                m_date_val = str(row.get("match_date", chosen_date_tab1 if chosen_date_tab1 != "all" else today_iso))
+                m_time_val = str(row.get("match_time", ""))
+                p1_prob = float(row.get("p1_win_prob", 0.5))
+                p2_prob = 1.0 - p1_prob
+                pred_winner = p1 if p1_prob >= 0.50 else p2
+                win_prob_pct = max(p1_prob, p2_prob) * 100.0
+
+                p1_odds = float(row.get("p1_odds", 1.90)) if not pd.isna(row.get("p1_odds")) else float(row.get("p1_fair_odds", 1.90))
+                p2_odds = float(row.get("p2_odds", 1.90)) if not pd.isna(row.get("p2_odds")) else float(row.get("p2_fair_odds", 1.90))
+
+                # Match with live ESPN results with exact date priority
+                m_res = tracker.match_prediction_with_live_result(p1, p2, live_espn_results, match_date=m_date_val)
+                if m_res:
+                    st_name = m_res.get("status", "SCHEDULED")
+                    sc_str = m_res.get("score", "")
+                    wn_str = m_res.get("winner", "")
+                    if not m_time_val or m_time_val == "nan":
+                        m_time_val = m_res.get("match_time", "")
+                    if st_name == "FINAL":
+                        card_status_badge = f'<span class="badge-pill badge-emerald">🏁 FINAL • {sc_str} (Winner: {wn_str})</span>'
+                    elif st_name == "WALKOVER":
+                        card_status_badge = f'<span class="badge-pill badge-slate">⚠️ WALKOVER (W/O) • {wn_str} adv</span>'
+                    elif st_name == "RETIRED":
+                        card_status_badge = f'<span class="badge-pill badge-amber">⚠️ RETIRED ({sc_str}) • {wn_str} won</span>'
+                    elif st_name == "IN_PROGRESS":
+                        card_status_badge = f'<span class="badge-pill badge-amber">🎾 LIVE ON COURT • {sc_str}</span>'
+                    else:
+                        card_status_badge = '<span class="badge-pill badge-blue">⏳ SCHEDULED • Upcoming</span>'
                 else:
                     card_status_badge = '<span class="badge-pill badge-blue">⏳ SCHEDULED • Upcoming</span>'
-            else:
-                card_status_badge = '<span class="badge-pill badge-blue">⏳ SCHEDULED • Upcoming</span>'
 
-            # Extract top 3 simple picks for this match
-            top_picks = TennisPredictionPipeline.extract_top_three_picks(row)
+                if not m_time_val or m_time_val == "nan":
+                    m_time_val = "Scheduled"
 
-            # Match Card Container
-            st.markdown(f"""
-            <div class="quant-card" style="margin-bottom: 16px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 8px;">
-                    <div>
-                        <span style="font-weight: 700; color: #f8fafc; font-size: 1.05rem;">{tourney}</span>
-                        <span style="color: #94a3b8; font-size: 0.85rem; margin-left: 8px;">• {surf} Court • {rnd}</span>
-                    </div>
-                    <div>{card_status_badge}</div>
-                </div>
-                <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px;">
-                    <div style="flex: 1; min-width: 220px;">
-                        <div style="font-size: 1.15rem; font-weight: 700; color: {'#38bdf8' if p1_prob >= 0.5 else '#cbd5e1'};">
-                            {p1} <span class="mono-num" style="font-size: 0.9rem; color: #94a3b8;">(@{p1_odds:.2f} | {p1_prob:.1%})</span>
+                # Extract top 3 simple picks for this match
+                top_picks = TennisPredictionPipeline.extract_top_three_picks(row)
+
+                # Match Card Container
+                st.markdown(f"""
+                <div class="quant-card" style="margin-bottom: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 8px;">
+                        <div>
+                            <span style="font-weight: 700; color: #f8fafc; font-size: 1.05rem;">{tourney}</span>
+                            <span style="color: #94a3b8; font-size: 0.85rem; margin-left: 8px;">• {surf} Court • {rnd}</span>
+                            <span style="color: #38bdf8; font-size: 0.85rem; margin-left: 12px; font-weight: 600; background: rgba(56, 189, 248, 0.1); padding: 3px 8px; border-radius: 4px; border: 1px solid rgba(56, 189, 248, 0.25);">📅 {m_date_val} • {m_time_val}</span>
                         </div>
-                        <div style="font-size: 0.85rem; color: #64748b; margin: 2px 0;">vs</div>
-                        <div style="font-size: 1.15rem; font-weight: 700; color: {'#38bdf8' if p2_prob > 0.5 else '#cbd5e1'};">
-                            {p2} <span class="mono-num" style="font-size: 0.9rem; color: #94a3b8;">(@{p2_odds:.2f} | {p2_prob:.1%})</span>
+                        <div>{card_status_badge}</div>
+                    </div>
+                    <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px;">
+                        <div style="flex: 1; min-width: 220px;">
+                            <div style="font-size: 1.15rem; font-weight: 700; color: {'#38bdf8' if p1_prob >= 0.5 else '#cbd5e1'};">
+                                {p1} <span class="mono-num" style="font-size: 0.9rem; color: #94a3b8;">(@{p1_odds:.2f} | {p1_prob:.1%})</span>
+                            </div>
+                            <div style="font-size: 0.85rem; color: #64748b; margin: 2px 0;">vs</div>
+                            <div style="font-size: 1.15rem; font-weight: 700; color: {'#38bdf8' if p2_prob > 0.5 else '#cbd5e1'};">
+                                {p2} <span class="mono-num" style="font-size: 0.9rem; color: #94a3b8;">(@{p2_odds:.2f} | {p2_prob:.1%})</span>
+                            </div>
+                        </div>
+                        <div style="text-align: right; min-width: 160px;">
+                            <div style="font-size: 0.78rem; color: #94a3b8; text-transform: uppercase;">Predicted Winner</div>
+                            <div style="font-size: 1.25rem; font-weight: 800; color: #10b981;">{pred_winner}</div>
+                            <div style="font-size: 0.82rem; color: #38bdf8;">Confidence: {win_prob_pct:.1f}%</div>
                         </div>
                     </div>
-                    <div style="text-align: right; min-width: 160px;">
-                        <div style="font-size: 0.78rem; color: #94a3b8; text-transform: uppercase;">Predicted Winner</div>
-                        <div style="font-size: 1.25rem; font-weight: 800; color: #10b981;">{pred_winner}</div>
-                        <div style="font-size: 0.82rem; color: #38bdf8;">Confidence: {win_prob_pct:.1f}%</div>
-                    </div>
                 </div>
-            </div>
-            """, unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
 
             # Display Top 3 Simple Banker Picks with Real-Time Settlement Ticks
             if top_picks:
@@ -725,14 +809,30 @@ with tab_banker_tracker:
 
     # Top Control Bar: Date Selector & Sync Button
     dates_avail = tracker.get_all_available_prediction_dates()
-    date_options = ["🌟 All Dates (Consolidated)"] + [f"📅 {d}" for d in dates_avail]
+    today_iso = datetime.now().strftime("%Y-%m-%d")
+    tomorrow_iso = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
+
+    date_options = []
+    # Make sure Today is listed first so the dashboard immediately opens to Today's genuine results
+    if today_iso in dates_avail:
+        date_options.append(f"📅 {today_iso} (Today)")
+    for d in dates_avail:
+        if d == today_iso:
+            continue
+        elif d == tomorrow_iso:
+            date_options.append(f"📅 {d} (Tomorrow / Upcoming)")
+        else:
+            date_options.append(f"📅 {d}")
+    if not date_options and dates_avail:
+        date_options = [f"📅 {d}" for d in dates_avail]
+    date_options.append("🌟 All Dates (Consolidated)")
 
     ctl_c1, ctl_c2, ctl_c3 = st.columns([4, 3, 3])
     with ctl_c1:
         chosen_date_label = st.selectbox(
             "📅 Select Settlement Date",
             options=date_options,
-            index=1 if len(date_options) > 1 else 0,
+            index=0,
             help="Filter banker pick settlement ledger by specific date or view all dates consolidated from system start."
         )
     with ctl_c2:
@@ -747,7 +847,12 @@ with tab_banker_tracker:
                 st.rerun()
 
     # Load Banker Picks Ledger for selected date
-    selected_date_val = "all" if "All Dates" in chosen_date_label else chosen_date_label.replace("📅 ", "").strip()
+    if "All Dates" in chosen_date_label:
+        selected_date_val = "all"
+    else:
+        m_dt = re.search(r"\d{4}-\d{2}-\d{2}", chosen_date_label)
+        selected_date_val = m_dt.group(0) if m_dt else "all"
+
     df_banker_ledger, summary_banker = tracker.get_banker_picks_ledger(
         selected_date=selected_date_val,
         live_results=live_espn_results,

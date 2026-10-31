@@ -328,7 +328,7 @@ class TennisPredictionPipeline:
         p_any_tb = [m["any_tiebreak_prob"] for m in markov_results]
 
         # 6. Build Comprehensive Output DataFrame
-        out = pd.DataFrame({
+        out_data = {
             "match_date": df["match_date"],
             "player1": df["player1"],
             "player2": df["player2"],
@@ -336,6 +336,12 @@ class TennisPredictionPipeline:
             "tournament_level": df["tournament_level"],
             "round": df["round"],
             "best_of": df["best_of"],
+        }
+        for meta_col in ("tournament", "match_time", "status", "tour"):
+            if meta_col in df.columns:
+                out_data[meta_col] = df[meta_col]
+
+        out_data.update({
             # Ratings context
             "p1_elo_blended": np.round(df_features["p1_elo_blended"], 1),
             "p2_elo_blended": np.round(df_features["p2_elo_blended"], 1),
@@ -390,7 +396,8 @@ class TennisPredictionPipeline:
             "pred_total_sets": np.round(pred_ts, 2),
             "prob_over_2_5_sets": np.round(p_over_2_5, 3),
             "prob_straight_sets_2_0": np.round(1.0 - p_over_2_5, 3),
-        }, index=df.index)
+        })
+        out = pd.DataFrame(out_data, index=df.index)
 
         # 7. Multi-Market Value Edge & Portfolio Allocation
         if "p1_odds" in df.columns and "p2_odds" in df.columns:

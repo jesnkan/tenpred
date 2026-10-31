@@ -65,7 +65,9 @@ class TennisLiveFetcher:
     def fetch_espn_daily_fixtures(
         self,
         tour: str = "both",
-        only_scheduled: bool = True,
+        only_scheduled: bool = False,
+        target_date: Optional[str] = None,
+        date_range: Optional[List[str]] = None,
         attach_baseline_odds: bool = True,
     ) -> pd.DataFrame:
         """Fetch live matches from ESPN free public tennis scoreboard endpoints.
@@ -75,10 +77,12 @@ class TennisLiveFetcher:
         Args:
             tour: 'atp', 'wta', or 'both'.
             only_scheduled: If True, filters for STATUS_SCHEDULED matches (upcoming).
+            target_date: Optional date string 'YYYY-MM-DD' to filter specific day.
+            date_range: Optional list of date strings to filter.
             attach_baseline_odds: If True, synthesizes standard market consensus odds with 5% overround.
 
         Returns:
-            DataFrame of real scheduled fixtures.
+            DataFrame of real scheduled fixtures with actual event dates and scheduled times.
         """
         urls = []
         if tour.lower() in ("atp", "both"):
@@ -116,8 +120,20 @@ class TennisLiveFetcher:
 
                         competitions = grp.get("competitions", [])
                         for comp in competitions:
-                            st_name = comp.get("status", {}).get("type", {}).get("name", "")
-                            if only_scheduled and st_name != "STATUS_SCHEDULED":
+                            st_type = comp.get("status", {}).get("type", {})
+                            st_name = st_type.get("name", "")
+                            st_detail = st_type.get("detail", "")
+                            st_short = st_type.get("shortDetail", "")
+
+                            c_date_raw = comp.get("date", ev.get("date", ""))
+                            comp_date_iso = str(c_date_raw)[:10] if c_date_raw else datetime.now().strftime("%Y-%m-%d")
+                            time_str = st_detail or st_short or "Scheduled"
+
+                            if target_date and comp_date_iso != target_date:
+                                continue
+                            if date_range and comp_date_iso not in date_range:
+                                continue
+                            if only_scheduled and st_name not in ("STATUS_SCHEDULED", "STATUS_IN_PROGRESS"):
                                 continue
 
                             competitors = comp.get("competitors", [])
@@ -140,7 +156,9 @@ class TennisLiveFetcher:
                                     "tournament_level": tier,
                                     "round": round_norm,
                                     "best_of": 5 if ("open" in t_name.lower() or "wimbledon" in t_name.lower()) and tour_name == "ATP" else 3,
-                                    "match_date": datetime.now().strftime("%Y-%m-%d"),
+                                    "match_date": comp_date_iso,
+                                    "match_time": time_str,
+                                    "status": st_name,
                                     "tour": tour_name,
                                 })
 
@@ -151,8 +169,8 @@ class TennisLiveFetcher:
             logger.info("No live scheduled fixtures found currently on ESPN scoreboard.")
             return pd.DataFrame()
 
-        df = pd.DataFrame(all_fixtures).drop_duplicates(subset=["player1", "player2"]).reset_index(drop=True)
-        logger.info(f"Successfully fetched {len(df)} real scheduled matches from ESPN.")
+        df = pd.DataFrame(all_fixtures).drop_duplicates(subset=["match_date", "player1", "player2"]).reset_index(drop=True)
+        logger.info(f"Successfully fetched {len(df)} real matches from ESPN.")
 
         # Attach realistic market consensus odds (with standard 5.0% bookmaker margin)
         if attach_baseline_odds:
