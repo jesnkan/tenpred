@@ -1,27 +1,66 @@
 tournament,player1,player2,surface,tournament_level,round,best_of,match_date,tour,p1_odds,p2_odds
-Erste Bank Open,Daniil Medvedev,Adrian Mannarino,Hard,A,QF,5,2026-10-30,ATP,1.17,5.9
-Erste Bank Open,Carlos Alcaraz,Tommy Paul,Hard,A,QF,5,2026-10-30,ATP,1.37,3.42
-Erste Bank Open,Arthur Fery,Alexander Zverev,Hard,A,QF,5,2026-10-30,ATP,7.91,1.11
-Erste Bank Open,Alex de Minaur,Matteo Berrettini,Hard,A,QF,5,2026-10-30,ATP,2.68,1.54
-Swiss Indoors Basel,Valentin Vacherot,Holger Rune,Hard,A,QF,3,2026-10-30,ATP,4.28,1.26
-Swiss Indoors Basel,Arthur Fils,Taylor Fritz,Hard,A,QF,3,2026-10-30,ATP,3.23,1.4
-Swiss Indoors Basel,Jiri Lehecka,Jerome Kym,Hard,A,QF,3,2026-10-30,ATP,1.53,2.71
-Swiss Indoors Basel,Nuno Borges,Jan-Lennard Struff,Hard,A,QF,3,2026-10-30,ATP,1.86,2.05
-Guangzhou Open,Harriet Dart,Paula Badosa,Hard,A,QF,3,2026-10-30,WTA,5.36,1.19
-Guangzhou Open,Jil Teichmann,Kaitlin Quevedo,Hard,A,QF,3,2026-10-30,WTA,2.07,1.85
-Guangzhou Open,Claire Liu,Xinran Sun,Hard,A,QF,3,2026-10-30,WTA,2.22,1.74
-Guangzhou Open,Shi Han,Lilli Tagger,Hard,A,QF,3,2026-10-30,WTA,1.95,1.95
-Toray Pan Pacific Open Tennis,Alycia Parks,Mia Pohankova,Hard,A,QF,3,2026-10-30,WTA,2.4,1.64
-Toray Pan Pacific Open Tennis,Leylah Fernandez,Elena Rybakina,Hard,A,QF,3,2026-10-30,WTA,3.25,1.39
-Toray Pan Pacific Open Tennis,Diana Shnaider,Alexandra Eala,Hard,A,QF,3,2026-10-30,WTA,1.19,5.42
-Curitiba Open,Julia Grabher,Leyre Romero Gormaz,Clay,A,QF,3,2026-10-30,WTA,2.01,1.89
-Curitiba Open,Solana Sierra,Julia Riera,Clay,A,QF,3,2026-10-30,WTA,2.12,1.81
-Curitiba Open,Nauhany Vitoria Leme Da Silva,Francesca Jones,Clay,A,QF,3,2026-10-30,WTA,1.99,1.91
-Curitiba Open,Jazmin Ortenzi,Alice Tubello,Clay,A,QF,3,2026-10-30,WTA,1.88,2.02
-Valle D'Aosta Ladies Open,Noma Noha Akugue,Ayla Aksu,Hard,A,QF,3,2026-10-30,WTA,1.97,1.94
-Valle D'Aosta Ladies Open,Alina Charaeva,Marina Bassols Ribera,Hard,A,QF,3,2026-10-30,WTA,1.67,2.35
-Valle D'Aosta Ladies Open,Martyna Kubka,Anna Blinkova,Hard,A,QF,3,2026-10-30,WTA,1.69,2.31
-Valle D'Aosta Ladies Open,Elizara Yaneva,Elsa Jacquemot,Hard,A,QF,3,2026-10-30,WTA,1.74,2.22
-Queretaro Open,Valeriya Strakhova,Tatjana Maria,Hard,A,QF,3,2026-10-30,WTA,1.58,2.55
-Queretaro Open,Carole Monnet,Nadia Podoroska,Hard,A,QF,3,2026-10-30,WTA,1.62,2.46
-Queretaro Open,Elizabeth Mandlik,Fiona Ferro,Hard,A,QF,3,2026-10-30,WTA,1.87,2.04
+Erste Bank Open,Carlos Alcaraz,Alex de Minaur,Hard,A,F,5,2026-10-31,ATP,1.1,8.41
+Swiss Indoors Basel,Valentin Vacherot,Jiri Lehecka,Hard,A,F,3,2026-10-31,ATP,2.91,1.47
+Rolex Paris Masters,Mattia Bellucci,Thiago Agustin Tirante,Hard,M,F,3,2026-10-31,ATP,1.94,1.96
+Rolex Paris Masters,Vit Kopriva,Rinky Hijikata,Hard,M,F,3,2026-10-31,ATP,2.23,1.73
+Rolex Paris Masters,Miomir Kecmanovic,Juan Manuel Cerundolo,Hard,M,F,3,2026-10-31,ATP,1.82,2.1
+Rolex Paris Masters,Yannick Hanfmann,Benjamin Bonzi,Hard,M,F,3,2026-10-31,ATP,1.96,1.94
+Rolex Paris Masters,Tomas Machac,Sebastian Baez,Hard,M,F,3,2026-10-31,ATP,1.34,3.56
+Rolex Paris Masters,Lorenzo Sonego,Adolfo Daniel Vallejo,Hard,M,F,3,2026-10-31,ATP,1.93,1.97
+Rolex Paris Masters,Alex Molcan,Nuno Borges,Hard,M,F,3,2026-10-31,ATP,2.0,1.9
+Rolex Paris Masters,Alexander Blockx,Daniel Merida,Hard,M,R32,3,2026-10-31,ATP,2.12,1.81
+Rolex Paris Masters,Holger Rune,Tommy Paul,Hard,M,R32,3,2026-10-31,ATP,1.93,1.97
+Rolex Paris Masters,Francisco Cerundolo,Arthur Rinderknech,Hard,M,R32,3,2026-10-31,ATP,1.69,2.3
+Rolex Paris Masters,Matteo Arnaldi,Cameron Norrie,Hard,M,R32,3,2026-10-31,ATP,1.83,2.09
+Rolex Paris Masters,Jiri Lehecka,Alex Michelsen,Hard,M,R32,3,2026-10-31,ATP,1.9,2.01
+Rolex Paris Masters,Botic Van De Zandschulp,Ugo Humbert,Hard,M,R32,3,2026-10-31,ATP,4.16,1.27
+Rolex Paris Masters,Tomas Martin Etcheverry,Andrey Rublev,Hard,M,R32,3,2026-10-31,ATP,2.65,1.55
+Rolex Paris Masters,Matteo Berrettini,Brandon Nakashima,Hard,M,R32,3,2026-10-31,ATP,1.8,2.13
+Rolex Paris Masters,Valentin Vacherot,Novak Djokovic,Hard,M,R32,3,2026-10-31,ATP,10.46,1.08
+Rolex Paris Masters,Mariano Navone,Luca Van Assche,Hard,M,R32,3,2026-10-31,ATP,1.95,1.95
+Rolex Paris Masters,Hubert Hurkacz,Lorenzo Musetti,Hard,M,R32,3,2026-10-31,ATP,1.6,2.49
+Rolex Paris Masters,Zizou Bergs,Ignacio Buse,Hard,M,R32,3,2026-10-31,ATP,1.85,2.06
+Rolex Paris Masters,Karen Khachanov,Denis Shapovalov,Hard,M,R32,3,2026-10-31,ATP,1.53,2.69
+Rolex Paris Masters,Moise Kouame,Alejandro Davidovich Fokina,Hard,M,R32,3,2026-10-31,ATP,2.22,1.74
+Rolex Paris Masters,Rafael Jodar,Alejandro Tabilo,Hard,M,R32,3,2026-10-31,ATP,2.2,1.75
+Rolex Paris Masters,Arthur Gea,Jan-Lennard Struff,Hard,M,R32,3,2026-10-31,ATP,1.95,1.95
+Rolex Paris Masters,Learner Tien,Stefanos Tsitsipas,Hard,M,R32,3,2026-10-31,ATP,3.17,1.41
+Rolex Paris Masters,Arthur Fery,Quentin Halys,Hard,M,R32,3,2026-10-31,ATP,2.01,1.9
+Guangzhou Open,Harriet Dart,Lilli Tagger,Hard,A,F,3,2026-10-31,WTA,2.15,1.79
+Toray Pan Pacific Open Tennis,Diana Shnaider,Leylah Fernandez,Hard,A,F,3,2026-10-31,WTA,1.65,2.38
+Curitiba Open,Julia Grabher,Alice Tubello,Clay,A,F,3,2026-10-31,WTA,2.07,1.84
+Valle D'Aosta Ladies Open,Alina Charaeva,Noma Noha Akugue,Hard,A,F,3,2026-10-31,WTA,1.94,1.97
+Queretaro Open,Fiona Ferro,Tatjana Maria,Hard,A,SF,3,2026-10-31,WTA,1.74,2.22
+Queretaro Open,Carole Monnet,Bianca Andreescu,Hard,A,SF,3,2026-10-31,WTA,2.03,1.88
+Prudential Hong Kong Tennis Open,Mika Stojsavljevic,Tatiana Prozorova,Hard,A,F,3,2026-10-31,WTA,1.85,2.06
+Prudential Hong Kong Tennis Open,Carol Young Suh Lee,Aliaksandra Sasnovich,Hard,A,F,3,2026-10-31,WTA,1.75,2.21
+Prudential Hong Kong Tennis Open,Alexandra Shubladze,Emerson Jones,Hard,A,F,3,2026-10-31,WTA,1.95,1.95
+Prudential Hong Kong Tennis Open,Elena Pridankina,Himeno Sakatsume,Hard,A,F,3,2026-10-31,WTA,2.07,1.85
+Prudential Hong Kong Tennis Open,Paula Badosa,Kaitlin Quevedo,Hard,A,R32,3,2026-10-31,WTA,1.24,4.62
+Prudential Hong Kong Tennis Open,Tereza Valentova,Xinran Sun,Hard,A,R32,3,2026-10-31,WTA,1.95,1.95
+Prudential Hong Kong Tennis Open,Alexandra Eala,Alycia Parks,Hard,A,R32,3,2026-10-31,WTA,2.09,1.83
+Prudential Hong Kong Tennis Open,Sofia Kenin,Leylah Fernandez,Hard,A,R32,3,2026-10-31,WTA,2.49,1.61
+Prudential Hong Kong Tennis Open,Zeynep Sonmez,Dayana Yastremska,Hard,A,R32,3,2026-10-31,WTA,1.55,2.63
+Prudential Hong Kong Tennis Open,Katie Boulter,Viktorija Golubic,Hard,A,R32,3,2026-10-31,WTA,1.53,2.68
+Prudential Hong Kong Tennis Open,Oleksandra Oliynykova,Talia Gibson,Hard,A,R32,3,2026-10-31,WTA,1.81,2.11
+Prudential Hong Kong Tennis Open,Maya Joint,Maddison Inglis,Hard,A,R32,3,2026-10-31,WTA,1.85,2.06
+Prudential Hong Kong Tennis Open,Maria Timofeeva,Sorana Cirstea,Hard,A,R32,3,2026-10-31,WTA,2.21,1.75
+Prudential Hong Kong Tennis Open,Adithya Karunaratne,Wang Xinyu,Hard,A,R32,3,2026-10-31,WTA,1.95,1.95
+Prudential Hong Kong Tennis Open,Mary Stoiana,Venus Williams,Hard,A,R32,3,2026-10-31,WTA,1.71,2.27
+Prudential Hong Kong Tennis Open,Alina Charaeva,Antonia Ruzic,Hard,A,R32,3,2026-10-31,WTA,1.96,1.95
+Chennai Open,Momoko Kobori,Kyoka Okamura,Hard,A,F,3,2026-10-31,WTA,1.92,1.99
+Chennai Open,Rada Zolotareva,Aliona Falei,Hard,A,F,3,2026-10-31,WTA,1.87,2.04
+Chennai Open,Weronika Falkowska,Viktoria Morvayova,Hard,A,F,3,2026-10-31,WTA,1.97,1.94
+Chennai Open,Zhibek Kulambayeva,Mei Yamaguchi,Hard,A,F,3,2026-10-31,WTA,1.95,1.95
+Chennai Open,Mai Hontama,Mananchaya Sawangkaew,Hard,A,R32,3,2026-10-31,WTA,2.4,1.64
+Chennai Open,Robin Montgomery,Panna Udvardy,Hard,A,R32,3,2026-10-31,WTA,1.97,1.93
+Chennai Open,Polina Iatcenko,Anastasia Zakharova,Hard,A,R32,3,2026-10-31,WTA,2.03,1.87
+Chennai Open,Joanna Garland,Jil Teichmann,Hard,A,R32,3,2026-10-31,WTA,1.85,2.07
+Chennai Open,Vaishnavi Adkar,Jodie Burrage,Hard,A,R32,3,2026-10-31,WTA,1.89,2.02
+Chennai Open,Teodora Kostovic,Oksana Selekhmeteva,Hard,A,R32,3,2026-10-31,WTA,1.95,1.95
+Chennai Open,Simona Waltert,Sahaja Yamalapalli,Hard,A,R32,3,2026-10-31,WTA,2.14,1.79
+Chennai Open,Polina Kudermetova,Harriet Dart,Hard,A,R32,3,2026-10-31,WTA,1.69,2.31
+Chennai Open,Lilli Tagger,Elsa Jacquemot,Hard,A,R32,3,2026-10-31,WTA,1.74,2.22
+Chennai Open,Katherine Hui,Janice Tjen,Hard,A,R32,3,2026-10-31,WTA,2.01,1.89
+Chennai Open,Katarzyna Kawa,Maaya Rajeshwaran Revathi,Hard,A,R32,3,2026-10-31,WTA,1.93,1.97
+Chennai Open,Rebecca Sramkova,Moyuka Uchijima,Hard,A,R32,3,2026-10-31,WTA,1.3,3.91

@@ -188,6 +188,93 @@ class TestTennisResultsTracker(unittest.TestCase):
         self.assertTrue(grade_loss["is_failed"])
         self.assertEqual(grade_loss["profit_units"], -1.0)
 
+    def test_grade_walkover_voided(self):
+        """Test that walkover results strictly grade as VOID with 0 units profit."""
+        banker_pick = {
+            "title": "Elena Rybakina to Win At Least 1 Set",
+            "market": "Set Betting",
+            "fair_odds": 1.25,
+            "win_prob_pct": 82.0,
+        }
+        live_result = {
+            "status": "WALKOVER",
+            "winner": "Leylah Fernandez",
+            "score": "W/O (Walkover)",
+            "p1_norm": "leylah fernandez",
+            "p2_norm": "elena rybakina",
+            "p1_sets": 0,
+            "p2_sets": 0,
+            "total_games": 0,
+        }
+        grade = self.tracker.grade_banker_pick(
+            banker_pick=banker_pick,
+            player1="Leylah Fernandez",
+            player2="Elena Rybakina",
+            live_result=live_result,
+        )
+        self.assertEqual(grade["settlement"], "VOID")
+        self.assertTrue(grade["is_void"])
+        self.assertFalse(grade["is_won"])
+        self.assertFalse(grade["is_failed"])
+        self.assertEqual(grade["profit_units"], 0.0)
+        self.assertEqual(grade["badge"], "⚠️ VOIDED")
+
+    def test_grade_retirement_incomplete_voided(self):
+        """Test that uncompleted total games aborted by retirement grade as VOID."""
+        banker_pick = {
+            "title": "Over 19.5 Total Match Games",
+            "market": "Total Games",
+            "fair_odds": 1.30,
+            "win_prob_pct": 77.0,
+        }
+        live_result = {
+            "status": "RETIRED",
+            "winner": "Taylor Fritz",
+            "score": "2-6 0-2 ret",
+            "p1_norm": "arthur fils",
+            "p2_norm": "taylor fritz",
+            "p1_sets": 0,
+            "p2_sets": 1,
+            "total_games": 10,
+        }
+        grade = self.tracker.grade_banker_pick(
+            banker_pick=banker_pick,
+            player1="Arthur Fils",
+            player2="Taylor Fritz",
+            live_result=live_result,
+        )
+        self.assertEqual(grade["settlement"], "VOID")
+        self.assertTrue(grade["is_void"])
+        self.assertEqual(grade["profit_units"], 0.0)
+
+    def test_grade_retirement_completed_won(self):
+        """Test that selection already achieved before retirement grades as WON."""
+        banker_pick = {
+            "title": "Taylor Fritz to Win At Least 1 Set",
+            "market": "Set Betting",
+            "fair_odds": 1.25,
+            "win_prob_pct": 82.0,
+        }
+        live_result = {
+            "status": "RETIRED",
+            "winner": "Taylor Fritz",
+            "score": "2-6 0-2 ret",
+            "p1_norm": "arthur fils",
+            "p2_norm": "taylor fritz",
+            "p1_sets": 0,
+            "p2_sets": 1,  # Fritz already won set 1 (6-2)
+            "total_games": 10,
+        }
+        grade = self.tracker.grade_banker_pick(
+            banker_pick=banker_pick,
+            player1="Arthur Fils",
+            player2="Taylor Fritz",
+            live_result=live_result,
+        )
+        self.assertEqual(grade["settlement"], "WON")
+        self.assertTrue(grade["is_won"])
+        self.assertEqual(grade["profit_units"], 0.25)
+
 
 if __name__ == "__main__":
     unittest.main()

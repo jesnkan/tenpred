@@ -16,3 +16,4 @@ if str(root_dir) not in sys.path:
 # Execute main application script
 app_path = root_dir / "app.py"
 runpy.run_path(str(app_path), run_name="__main__")
+
