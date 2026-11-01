@@ -45,7 +45,7 @@ st.markdown("""
         --text-primary: #0f172a;
         --text-secondary: #334155;
         --text-muted: #64748b;
-        --accent-primary: #2563eb;
+        --accent-primary: #0f172a;
         --accent-emerald: #059669;
         --accent-rose: #e11d48;
         --accent-amber: #d97706;
@@ -128,10 +128,10 @@ st.markdown("""
         color: #047857;
         border: 1px solid #a7f3d0;
     }
-    .badge-blue {
-        background: #eff6ff;
-        color: #1d4ed8;
-        border: 1px solid #bfdbfe;
+    .badge-blue, .badge-dark {
+        background: #f1f5f9;
+        color: #0f172a;
+        border: 1px solid #cbd5e1;
     }
     .badge-amber {
         background: #fffbeb;
@@ -147,6 +147,30 @@ st.markdown("""
         background: #f1f5f9;
         color: #475569;
         border: 1px solid #cbd5e1;
+    }
+
+    /* Buttons in sleek black and dark gray */
+    button[kind="primary"] {
+        background-color: #0f172a !important;
+        border-color: #0f172a !important;
+        color: #ffffff !important;
+        font-weight: 600 !important;
+    }
+    button[kind="primary"]:hover {
+        background-color: #334155 !important;
+        border-color: #334155 !important;
+        color: #ffffff !important;
+    }
+    button[kind="secondary"] {
+        background-color: #ffffff !important;
+        border-color: #e2e8f0 !important;
+        color: #0f172a !important;
+        font-weight: 600 !important;
+    }
+    button[kind="secondary"]:hover {
+        background-color: #f1f5f9 !important;
+        border-color: #cbd5e1 !important;
+        color: #0f172a !important;
     }
 
     /* Betslip Drawer */
@@ -358,7 +382,7 @@ with st.sidebar:
         </div>
     </div>
     <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px;">
-        <span class="badge-pill badge-blue">ATP Tour</span>
+        <span class="badge-pill badge-dark">ATP Tour</span>
         <span class="badge-pill badge-emerald">WTA Tour</span>
         <span class="badge-pill badge-slate">Live Settlement</span>
     </div>
@@ -382,7 +406,7 @@ with st.sidebar:
         st.markdown("""
         <div style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 14px; text-align: center; color: #64748b; font-size: 0.85rem;">
             Your betslip is empty.<br>
-            Click <b style="color: #2563eb;">+ Add to Slip</b> on any match pick to build single or multi-leg wagers.
+            Click <b style="color: #0f172a;">+ Add to Slip</b> on any match pick to build single or multi-leg wagers.
         </div>
         """, unsafe_allow_html=True)
     else:
@@ -400,7 +424,7 @@ with st.sidebar:
                 <div style="font-size: 0.88rem; font-weight: 700; color: #0f172a;">{leg['pick']}</div>
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
                     <span class="mono-num" style="color: #059669; font-weight: 800;">@{leg['odds']:.2f}</span>
-                    <span style="font-size: 0.78rem; color: #2563eb; font-weight: 600;">Prob: {leg['prob']:.1%}</span>
+                    <span style="font-size: 0.78rem; color: #475569; font-weight: 600;">Prob: {leg['prob']:.1%}</span>
                 </div>
             </div>
             """, unsafe_allow_html=True)
@@ -424,7 +448,7 @@ with st.sidebar:
             </div>
             <div style="display: flex; justify-content: space-between; align-items: baseline; margin: 4px 0;">
                 <span style="font-size: 0.88rem; color: #475569;">Cumulative Odds:</span>
-                <span class="mono-num" style="font-size: 1.35rem; font-weight: 800; color: #2563eb;">@{total_odds:.2f}</span>
+                <span class="mono-num" style="font-size: 1.35rem; font-weight: 800; color: #0f172a;">@{total_odds:.2f}</span>
             </div>
             <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;">
                 <span style="font-size: 0.85rem; color: #475569;">Win Probability:</span>
@@ -493,7 +517,7 @@ st.markdown("""
         <div style="display: flex; align-items: center; gap: 10px;">
             <span style="font-size: 1.8rem;">🎾</span>
             <span style="font-size: 1.85rem; font-weight: 800; letter-spacing: -0.6px; color: #0f172a;">tenpred</span>
-            <span style="background: #eff6ff; color: #2563eb; font-weight: 700; font-size: 0.78rem; padding: 3px 8px; border-radius: 6px; border: 1px solid #bfdbfe;">ATP & WTA MATCH INTELLIGENCE</span>
+            <span style="background: #f1f5f9; color: #0f172a; font-weight: 700; font-size: 0.78rem; padding: 3px 8px; border-radius: 6px; border: 1px solid #cbd5e1;">ATP & WTA MATCH INTELLIGENCE</span>
         </div>
         <p style="color: #64748b; font-size: 0.92rem; margin: 4px 0 0 0;">
             Institutional tennis analytics, consensus market odds, and real-time score settlement.
@@ -722,9 +746,9 @@ with tab_today:
                     elif st_name == "IN_PROGRESS":
                         card_status_badge = f'<span class="badge-pill badge-amber">LIVE ON COURT • {sc_str}</span>'
                     else:
-                        card_status_badge = '<span class="badge-pill badge-blue">SCHEDULED • Upcoming</span>'
+                        card_status_badge = '<span class="badge-pill badge-slate">SCHEDULED • Upcoming</span>'
                 else:
-                    card_status_badge = '<span class="badge-pill badge-blue">SCHEDULED • Upcoming</span>'
+                    card_status_badge = '<span class="badge-pill badge-slate">SCHEDULED • Upcoming</span>'
 
                 if not m_time_val or m_time_val == "nan":
                     m_time_val = "Scheduled"
@@ -739,24 +763,24 @@ with tab_today:
                         <div>
                             <span style="font-weight: 700; color: #0f172a; font-size: 1.05rem;">{tourney}</span>
                             <span style="color: #64748b; font-size: 0.85rem; margin-left: 8px;">• {surf} Court • {rnd}</span>
-                            <span style="color: #1d4ed8; font-size: 0.82rem; margin-left: 12px; font-weight: 600; background: #eff6ff; padding: 3px 8px; border-radius: 6px; border: 1px solid #bfdbfe;">{m_date_val} • {m_time_val}</span>
+                            <span style="color: #334155; font-size: 0.82rem; margin-left: 12px; font-weight: 600; background: #f1f5f9; padding: 3px 8px; border-radius: 6px; border: 1px solid #e2e8f0;">{m_date_val} • {m_time_val}</span>
                         </div>
                         <div>{card_status_badge}</div>
                     </div>
                     <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px;">
                         <div style="flex: 1; min-width: 220px;">
                             <div style="font-size: 1.12rem; font-weight: {'800' if p1_prob >= 0.5 else '600'}; color: {'#0f172a' if p1_prob >= 0.5 else '#475569'};">
-                                {p1} <span class="mono-num" style="font-size: 0.9rem; font-weight: 700; color: #2563eb;">@{p1_odds:.2f}</span> <span style="font-size: 0.82rem; color: #64748b;">({p1_prob:.1%})</span>
+                                {p1} <span class="mono-num" style="font-size: 0.9rem; font-weight: 700; color: #0f172a;">@{p1_odds:.2f}</span> <span style="font-size: 0.82rem; color: #64748b;">({p1_prob:.1%})</span>
                             </div>
                             <div style="font-size: 0.8rem; font-weight: 600; color: #94a3b8; margin: 2px 0;">vs</div>
                             <div style="font-size: 1.12rem; font-weight: {'800' if p2_prob > 0.5 else '600'}; color: {'#0f172a' if p2_prob > 0.5 else '#475569'};">
-                                {p2} <span class="mono-num" style="font-size: 0.9rem; font-weight: 700; color: #2563eb;">@{p2_odds:.2f}</span> <span style="font-size: 0.82rem; color: #64748b;">({p2_prob:.1%})</span>
+                                {p2} <span class="mono-num" style="font-size: 0.9rem; font-weight: 700; color: #0f172a;">@{p2_odds:.2f}</span> <span style="font-size: 0.82rem; color: #64748b;">({p2_prob:.1%})</span>
                             </div>
                         </div>
                         <div style="text-align: right; min-width: 160px;">
                             <div style="font-size: 0.75rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Projected Winner</div>
                             <div style="font-size: 1.25rem; font-weight: 800; color: #059669;">{pred_winner}</div>
-                            <div style="font-size: 0.82rem; color: #2563eb; font-weight: 600;">{win_prob_pct:.1f}% probability</div>
+                            <div style="font-size: 0.82rem; color: #475569; font-weight: 600;">{win_prob_pct:.1f}% probability</div>
                         </div>
                     </div>
                 </div>
@@ -766,7 +790,7 @@ with tab_today:
                 if top_picks:
                     p_cols = st.columns(3)
                     badges_titles = ["Banker Pick", "Spread Pick", "Value Edge"]
-                    badge_styles = ["badge-emerald", "badge-blue", "badge-amber"]
+                    badge_styles = ["badge-emerald", "badge-slate", "badge-amber"]
 
                 for p_idx, pick in enumerate(top_picks):
                     with p_cols[p_idx]:
@@ -937,7 +961,7 @@ with tab_banker_tracker:
             st.markdown(f"""
             <div class="quant-card">
                 <div class="quant-label">Scheduled / In-Play</div>
-                <div class="quant-val" style="color: #2563eb;">{pending_p}</div>
+                <div class="quant-val" style="color: #334155;">{pending_p}</div>
                 <div class="quant-sub">Awaiting Outcomes</div>
             </div>
             """, unsafe_allow_html=True)
@@ -1101,7 +1125,7 @@ with tab_banker_tracker:
                             badge_html = f'<span class="badge-pill badge-amber">{badge}</span>'
                         else:
                             border_style = "border: 1px solid #e2e8f0; background: #ffffff;"
-                            badge_html = '<span class="badge-pill badge-blue">Scheduled</span>'
+                            badge_html = '<span class="badge-pill badge-slate">Scheduled</span>'
 
                         st.markdown(f"""
                         <div class="quant-card" style="{border_style} margin-bottom: 10px; padding: 14px 18px;">
@@ -1255,7 +1279,7 @@ with tab_sim:
                 st.markdown(f"""
                 <div class="quant-card">
                     <div class="quant-label">Predicted Winner</div>
-                    <div class="quant-val" style="color: #2563eb;">{pred['predicted_winner']}</div>
+                    <div class="quant-val" style="color: #0f172a;">{pred['predicted_winner']}</div>
                     <div class="quant-sub">Win Probability: {max(p1_prob, p2_prob):.1%}</div>
                 </div>
                 """, unsafe_allow_html=True)
@@ -1307,7 +1331,7 @@ with tab_sim:
             if top_sim_picks:
                 sim_p_cols = st.columns(3)
                 badges_sim = ["Banker Pick", "Spread Pick", "Value Edge"]
-                badge_sim_styles = ["badge-emerald", "badge-blue", "badge-amber"]
+                badge_sim_styles = ["badge-emerald", "badge-slate", "badge-amber"]
 
                 for s_i, sp in enumerate(top_sim_picks):
                     with sim_p_cols[s_i]:
@@ -1318,7 +1342,7 @@ with tab_sim:
                                 <span class="mono-num" style="font-weight: 700; color: #059669;">@{sp['fair_odds']:.2f}</span>
                             </div>
                             <div style="font-size: 1.1rem; font-weight: 700; color: #0f172a; margin-bottom: 4px;">{sp['title']}</div>
-                            <div class="mono-num" style="font-size: 1.35rem; font-weight: 800; color: #2563eb; margin-bottom: 6px;">
+                            <div class="mono-num" style="font-size: 1.35rem; font-weight: 800; color: #0f172a; margin-bottom: 6px;">
                                 {sp['win_prob_pct']}%
                             </div>
                             <div style="font-size: 0.85rem; color: #475569; line-height: 1.45; margin-bottom: 12px;">
@@ -1387,7 +1411,7 @@ with tab_sim:
                     x=list(score_data.keys()),
                     y=[v * 100.0 for v in score_data.values()],
                     color=list(score_data.keys()),
-                    color_discrete_sequence=["#2563eb", "#60a5fa", "#f87171", "#e11d48"],
+                    color_discrete_sequence=["#0f172a", "#334155", "#475569", "#64748b"],
                     labels={"x": "Scoreline", "y": "Probability (%)"},
                     title="Exact Set Score Distribution",
                 )
@@ -1465,7 +1489,7 @@ with tab_elo:
             y="Player Name",
             orientation="h",
             color=chart_col,
-            color_continuous_scale="Blues",
+            color_continuous_scale=[[0, "#94a3b8"], [0.5, "#475569"], [1, "#0f172a"]],
         )
         fig_elo.update_layout(
             yaxis=dict(autorange="reversed"),
@@ -1545,7 +1569,7 @@ with tab_risk:
             fig_mc.add_trace(go.Scatter(
                 y=df_paths[col_name],
                 mode='lines',
-                line=dict(width=1.2, color="rgba(37, 99, 235, 0.15)"),
+                line=dict(width=1.2, color="rgba(71, 85, 105, 0.18)"),
                 showlegend=False,
             ))
 
@@ -1553,7 +1577,7 @@ with tab_risk:
         fig_mc.add_trace(go.Scatter(
             y=df_paths.median(axis=1),
             mode='lines',
-            line=dict(width=3.2, color="#2563eb"),
+            line=dict(width=3.2, color="#0f172a"),
             name="Median Trajectory",
         ))
 
