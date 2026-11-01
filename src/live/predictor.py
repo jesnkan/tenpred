@@ -499,8 +499,41 @@ class TennisPredictionPipeline:
         )
 
     # =========================================================================
-    # Simple Top 3 Pick Selector & Terminal Display Formatter
+    # Simple Top Pick Selector & Terminal Display Formatter
     # =========================================================================
+
+    @staticmethod
+    def extract_best_pick(
+        match_pred: Union[pd.Series, Dict[str, Any]],
+    ) -> Dict[str, Any]:
+        """Execute rigorous best-of analysis across all derivative markets to select
+        the single highest-conviction, highest-probability-adjusted pick for this match.
+
+        Evaluates player to win a set, moneyline, game spread, totals (over 19.5),
+        and first set, selecting the single optimum recommendation.
+
+        Returns:
+            Dictionary representing the single best pick with title, market, fair_odds,
+            win_prob_pct, confidence_tier, explanation, and action.
+        """
+        picks = TennisPredictionPipeline.extract_top_three_picks(match_pred)
+        if picks:
+            return picks[0]
+        r = match_pred.to_dict() if isinstance(match_pred, pd.Series) else dict(match_pred)
+        p1 = str(r.get("player1", "Player 1"))
+        p2 = str(r.get("player2", "Player 2"))
+        p1_prob = float(r.get("p1_win_prob", 0.5))
+        fav = p1 if p1_prob >= 0.5 else p2
+        prob = max(p1_prob, 1.0 - p1_prob)
+        return {
+            "title": f"{fav} to Win Match (Moneyline)",
+            "market": "Match Winner",
+            "win_prob_pct": round(prob * 100.0, 1),
+            "fair_odds": round(1.0 / max(1e-4, prob), 2),
+            "confidence_tier": "[RECOMMENDED BEST PICK]",
+            "explanation": f"{fav} holds clear statistical superiority in this match.",
+            "action": "Best Match Pick",
+        }
 
     @staticmethod
     def extract_top_three_picks(

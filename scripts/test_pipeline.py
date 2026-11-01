@@ -152,9 +152,29 @@ def test_from_trained_artifacts():
         assert 0.0 <= pred["p1_win_prob"] <= 1.0
 
 
+def test_extract_best_pick():
+    sample_match = {
+        "player1": "Jannik Sinner",
+        "player2": "Taylor Fritz",
+        "surface": "Hard",
+        "p1_win_prob": 0.82,
+        "p2_win_prob": 0.18,
+        "p1_win_at_least_one_set_prob": 0.94,
+        "p2_win_at_least_one_set_prob": 0.35,
+        "prob_over_19_5": 0.78,
+    }
+    best_pick = TennisPredictionPipeline.extract_best_pick(sample_match)
+    assert isinstance(best_pick, dict)
+    assert "title" in best_pick
+    assert "market" in best_pick
+    assert "win_prob_pct" in best_pick
+    assert best_pick["win_prob_pct"] >= 50.0
+
+
 if __name__ == "__main__":
     test_single_match_prediction()
     test_batch_match_prediction()
     test_from_trained_artifacts()
+    test_extract_best_pick()
     print("All TennisPredictionPipeline tests passed successfully!")
 

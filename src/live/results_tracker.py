@@ -640,10 +640,9 @@ class TennisResultsTracker:
                     if m_date != selected_date:
                         continue
 
-                top_picks = TennisPredictionPipeline.extract_top_three_picks(row_dict)
-                if not top_picks:
+                banker = TennisPredictionPipeline.extract_best_pick(row_dict)
+                if not banker:
                     continue
-                banker = top_picks[0]
 
                 # Match against live results with exact match date priority
                 m_res = self.match_prediction_with_live_result(p1, p2, live_results, match_date=m_date)

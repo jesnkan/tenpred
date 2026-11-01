@@ -734,13 +734,21 @@ st.markdown(f"""
 # Navigation Tabs (Clean & Professional, No Emojis, No AI Gimmicks)
 # =============================================================================
 
-tab_today, tab_banker_tracker, tab_sim, tab_elo, tab_risk = st.tabs([
+tab_names = [
     "Match Predictions",
     "Results Tracker",
     "Head-to-Head Simulator",
     "Player Rankings",
     "Bankroll Calculator",
-])
+]
+default_tab = st.session_state.pop("nav_tab_default", "Match Predictions")
+if default_tab not in tab_names:
+    default_tab = "Match Predictions"
+
+tab_today, tab_banker_tracker, tab_sim, tab_elo, tab_risk = st.tabs(
+    tab_names,
+    default=default_tab,
+)
 
 
 # Shared Results Tracker & Live ESPN Feed Cache
@@ -910,10 +918,62 @@ with tab_today:
             if "edge_pct" in filtered_df.columns:
                 filtered_df = filtered_df[filtered_df["edge_pct"] >= edge_threshold]
 
-            st.markdown(f"#### Displaying **{len(filtered_df)}** Evaluated Matches for **{sel_date_label}**")
+            # Apply best-of-analysis to choose the single best pick for every match
+            match_candidates = []
+            for m_idx, row in filtered_df.iterrows():
+                best_pick = TennisPredictionPipeline.extract_best_pick(row)
+                conf_score = float(best_pick.get("win_prob_pct", 50.0))
+                match_candidates.append({
+                    "orig_idx": m_idx,
+                    "row": row,
+                    "best_pick": best_pick,
+                    "score": conf_score,
+                })
 
-            # Interactive Cards View for Matches
-            for idx, row in filtered_df.iterrows():
+            # Rank matches by best-of-analysis confidence descending
+            match_candidates.sort(key=lambda x: x["score"], reverse=True)
+            total_matches_avail = len(match_candidates)
+
+            # Cap at the top 10 best picks match predictions
+            top_10_matches = match_candidates[:10]
+
+            # Prominent Indicator & Navigation Callout for Total Day Slate
+            st.markdown(f"""
+            <div class="quant-card" style="background: #ffffff; border: 1px solid #cbd5e1; border-left: 5px solid #0f172a; padding: 18px 22px; margin-bottom: 16px; border-radius: 10px; box-shadow: 0 2px 6px rgba(15,23,42,0.04);">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+                    <div style="flex: 1; min-width: 280px;">
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                            <span class="badge-pill badge-dark" style="font-weight: 700;">
+                                {get_icon('shield', 13, '#ffffff')} TOP 10 BANKER PICKS
+                            </span>
+                            <span style="font-size: 0.8rem; color: #64748b; font-weight: 600;">
+                                Showing Top {len(top_10_matches)} of {total_matches_avail} Evaluated Fixtures for {sel_date_label}
+                            </span>
+                        </div>
+                        <div style="font-size: 1.15rem; font-weight: 800; color: #0f172a;">
+                            Today's Top 10 Best Predictions (Single Optimal Pick per Match)
+                        </div>
+                        <div style="font-size: 0.85rem; color: #475569; margin-top: 4px; line-height: 1.45;">
+                            Each fixture below presents its single highest-conviction derivative pick derived from best-of market analysis. To review the <b>complete list of all {total_matches_avail} matches</b> for {sel_date_label} in the total day spreadsheet with live score settlement, access the <b>Results Tracker</b> page.
+                        </div>
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            c_cta1, c_cta2 = st.columns([7, 3])
+            with c_cta2:
+                if st.button("📊 Open Total Day Spreadsheet & Results Tracker →", key="btn_jump_to_tracker", type="primary", use_container_width=True):
+                    st.session_state["nav_tab_default"] = "Results Tracker"
+                    st.rerun()
+
+            st.markdown(f"#### Displaying Top **{len(top_10_matches)}** High-Confidence Match Predictions")
+
+            # Interactive Cards View for Matches (Only 1 Single Best Pick per Match)
+            for item in top_10_matches:
+                idx = item["orig_idx"]
+                row = item["row"]
+                best_pick = item["best_pick"]
                 p1 = str(row["player1"])
                 p2 = str(row["player2"])
                 tourney = str(row.get("tournament", "Tour Event"))
@@ -953,8 +1013,6 @@ with tab_today:
                 if not m_time_val or m_time_val == "nan":
                     m_time_val = "Scheduled"
 
-                # Extract top 3 simple picks for this match
-                top_picks = TennisPredictionPipeline.extract_top_three_picks(row)
                 p1_pct = p1_prob * 100.0
                 p2_pct = p2_prob * 100.0
 
@@ -1006,64 +1064,64 @@ with tab_today:
                 </div>
                 """, unsafe_allow_html=True)
 
-                # Display Top 3 Picks with Real-Time Settlement Ticks
-                if top_picks:
-                    p_cols = st.columns(3)
-                    badges_titles = ["Banker Pick", "Spread Pick", "Value Edge"]
-                    badge_styles = ["badge-emerald", "badge-dark", "badge-amber"]
-                    pick_icons = ["shield", "layers", "arrow_up_right"]
-                    pick_icon_colors = ["#047857", "#0f172a", "#b45309"]
+                # Grade Single Best Pick against live ESPN results
+                p_grade = tracker.grade_prediction_pick(best_pick, p1, p2, m_res)
+                settle = p_grade["settlement"]
+                badge_txt = p_grade["badge"]
 
-                for p_idx, pick in enumerate(top_picks):
-                    with p_cols[p_idx]:
-                        p_grade = tracker.grade_prediction_pick(pick, p1, p2, m_res)
-                        settle = p_grade["settlement"]
-                        badge_txt = p_grade["badge"]
+                if settle == "WON":
+                    box_style = "background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 14px 18px; margin-bottom: 8px;"
+                    badge_markup = f'<span class="badge-pill badge-emerald">{get_icon("check", 12, "#047857")} {badge_txt}</span>'
+                    action_markup = f'<div style="display: flex; align-items: center; justify-content: center; gap: 6px; background: #dcfce7; color: #15803d; font-weight: 800; font-size: 0.85rem; text-align: center; padding: 8px; border-radius: 6px; border: 1px solid #86efac; margin-bottom: 16px;">{get_icon("check", 14, "#15803d")} WON • CASHED</div>'
+                elif settle == "FAILED":
+                    box_style = "background: #fff1f2; border: 1px solid #fecdd3; border-radius: 8px; padding: 14px 18px; margin-bottom: 8px;"
+                    badge_markup = f'<span class="badge-pill badge-rose">{get_icon("cross", 12, "#be123c")} {badge_txt}</span>'
+                    action_markup = f'<div style="display: flex; align-items: center; justify-content: center; gap: 6px; background: #ffe4e6; color: #be123c; font-weight: 800; font-size: 0.85rem; text-align: center; padding: 8px; border-radius: 6px; border: 1px solid #fda4af; margin-bottom: 16px;">{get_icon("cross", 14, "#be123c")} LOST</div>'
+                elif settle == "VOID":
+                    box_style = "background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 14px 18px; margin-bottom: 8px;"
+                    badge_markup = f'<span class="badge-pill badge-slate">{get_icon("void", 12, "#475569")} {badge_txt}</span>'
+                    action_markup = f'<div style="display: flex; align-items: center; justify-content: center; gap: 6px; background: #f1f5f9; color: #475569; font-weight: 800; font-size: 0.85rem; text-align: center; padding: 8px; border-radius: 6px; border: 1px solid #cbd5e1; margin-bottom: 16px;">{get_icon("void", 14, "#475569")} VOIDED (Walkover / Refund)</div>'
+                elif settle == "IN_PLAY":
+                    box_style = "background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 14px 18px; margin-bottom: 8px;"
+                    badge_markup = f'<span class="badge-pill badge-amber">{get_icon("pulse", 12, "#b45309")} {badge_txt}</span>'
+                    action_markup = f'<div style="display: flex; align-items: center; justify-content: center; gap: 6px; background: #fef3c7; color: #b45309; font-weight: 800; font-size: 0.85rem; text-align: center; padding: 8px; border-radius: 6px; border: 1px solid #fcd34d; margin-bottom: 16px;">{get_icon("pulse", 14, "#b45309")} IN PLAY ON COURT</div>'
+                else:
+                    box_style = "background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px 18px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.03);"
+                    badge_markup = f'<span class="badge-pill badge-dark">{get_icon("shield", 12, "#0f172a")} BEST SELECTION • {best_pick["market"]}</span>'
+                    action_markup = None
 
-                        if settle == "WON":
-                            box_style = "background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 12px 14px; margin-bottom: 8px;"
-                            badge_markup = f'<span class="badge-pill badge-emerald">{get_icon("check", 12, "#047857")} {badge_txt}</span>'
-                            action_markup = f'<div style="display: flex; align-items: center; justify-content: center; gap: 6px; background: #dcfce7; color: #15803d; font-weight: 800; font-size: 0.82rem; text-align: center; padding: 7px; border-radius: 6px; border: 1px solid #86efac;">{get_icon("check", 14, "#15803d")} WON</div>'
-                        elif settle == "FAILED":
-                            box_style = "background: #fff1f2; border: 1px solid #fecdd3; border-radius: 8px; padding: 12px 14px; margin-bottom: 8px;"
-                            badge_markup = f'<span class="badge-pill badge-rose">{get_icon("cross", 12, "#be123c")} {badge_txt}</span>'
-                            action_markup = f'<div style="display: flex; align-items: center; justify-content: center; gap: 6px; background: #ffe4e6; color: #be123c; font-weight: 800; font-size: 0.82rem; text-align: center; padding: 7px; border-radius: 6px; border: 1px solid #fda4af;">{get_icon("cross", 14, "#be123c")} LOST</div>'
-                        elif settle == "VOID":
-                            box_style = "background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px 14px; margin-bottom: 8px;"
-                            badge_markup = f'<span class="badge-pill badge-slate">{get_icon("void", 12, "#475569")} {badge_txt}</span>'
-                            action_markup = f'<div style="display: flex; align-items: center; justify-content: center; gap: 6px; background: #f1f5f9; color: #475569; font-weight: 800; font-size: 0.82rem; text-align: center; padding: 7px; border-radius: 6px; border: 1px solid #cbd5e1;">{get_icon("void", 14, "#475569")} VOIDED</div>'
-                        elif settle == "IN_PLAY":
-                            box_style = "background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 12px 14px; margin-bottom: 8px;"
-                            badge_markup = f'<span class="badge-pill badge-amber">{get_icon("pulse", 12, "#b45309")} {badge_txt}</span>'
-                            action_markup = f'<div style="display: flex; align-items: center; justify-content: center; gap: 6px; background: #fef3c7; color: #b45309; font-weight: 800; font-size: 0.82rem; text-align: center; padding: 7px; border-radius: 6px; border: 1px solid #fcd34d;">{get_icon("pulse", 14, "#b45309")} IN PLAY</div>'
-                        else:
-                            box_style = "background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px; margin-bottom: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);"
-                            badge_markup = f'<span class="badge-pill {badge_styles[p_idx]}">{get_icon(pick_icons[p_idx], 12, pick_icon_colors[p_idx])} {badges_titles[p_idx]}</span>'
-                            action_markup = None
-
-                        st.markdown(f"""
-                        <div style="{box_style}">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                                {badge_markup}
-                                <span class="mono-num" style="font-weight: 800; color: #059669;">@{pick['fair_odds']:.2f}</span>
-                            </div>
-                            <div style="font-size: 0.95rem; font-weight: 700; color: #0f172a; margin-bottom: 4px;">{pick['title']}</div>
-                            <div style="font-size: 0.82rem; color: #64748b; margin-bottom: 8px;">{pick['explanation']}</div>
+                st.markdown(f"""
+                <div style="{box_style}">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 8px;">
+                        <div>{badge_markup}</div>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="font-size: 0.82rem; color: #64748b; font-weight: 600;">Model Prob: <b style="color: #0f172a;">{best_pick['win_prob_pct']}%</b></span>
+                            <span class="odds-chip" style="font-size: 0.95rem; font-weight: 800; color: #059669;">@{best_pick['fair_odds']:.2f}</span>
                         </div>
-                        """, unsafe_allow_html=True)
+                    </div>
+                    <div style="font-size: 1.15rem; font-weight: 800; color: #0f172a; margin-bottom: 4px;">
+                        {best_pick['title']}
+                    </div>
+                    <div style="font-size: 0.85rem; color: #475569; line-height: 1.45;">
+                        {best_pick['explanation']}
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
 
-                        if action_markup:
-                            st.markdown(action_markup, unsafe_allow_html=True)
-                        else:
-                            if st.button(f"+ Add to Slip", key=f"btn_add_slip_{idx}_{p_idx}", use_container_width=True):
-                                add_to_betslip(
-                                    match=f"{p1} vs {p2}",
-                                    market=pick["market"],
-                                    pick=pick["title"],
-                                    odds=pick["fair_odds"],
-                                    prob=pick["win_prob_pct"] / 100.0,
-                                )
-                                st.rerun()
+                if action_markup:
+                    st.markdown(action_markup, unsafe_allow_html=True)
+                else:
+                    if st.button(f"+ Add to Slip ({best_pick['title']})", key=f"btn_add_slip_top_{idx}", use_container_width=True):
+                        add_to_betslip(
+                            match=f"{p1} vs {p2}",
+                            market=best_pick["market"],
+                            pick=best_pick["title"],
+                            odds=best_pick["fair_odds"],
+                            prob=best_pick["win_prob_pct"] / 100.0,
+                        )
+                        st.rerun()
+
+                st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
 
             st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
 
@@ -1076,8 +1134,8 @@ with tab_today:
 # =============================================================================
 
 with tab_banker_tracker:
-    st.subheader("Banker Picks Outcome & Results Settlement Tracker")
-    st.markdown("Dedicated verification ledger tracking **the system's selected Banker Pick** per match with chronological date segmentation, void/walkover handling, and transparent settlement auditing.")
+    st.markdown(f"### {get_icon('layers', 20, '#0f172a')} Total Day Predictions Spreadsheet & Settlement Tracker", unsafe_allow_html=True)
+    st.markdown("Complete master ledger containing **all evaluated matches for the day** with the single optimal Best Pick per fixture, decimal odds, win probabilities, real-time scorelines, and automated sportsbook settlement.")
 
     # Top Control Bar: Date Selector & Sync Button
     dates_avail = tracker.get_all_available_prediction_dates()
@@ -1279,8 +1337,10 @@ with tab_banker_tracker:
                     st.toast(f"Simulated {test_row['player2']} win 6-2 6-2")
                     st.rerun()
 
-        # Decluttering & Filtering Controls
+        # Decluttering, Search & Filtering Controls
         st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
+        search_filter = st.text_input("🔍 Search Matchup, Player, or Tournament Name", "", placeholder="e.g. Sinner, Alcaraz, Paris, R32...")
+
         flt_col1, flt_col2, flt_col3, flt_col4 = st.columns([3, 3, 3, 3])
         with flt_col1:
             banker_status_filter = st.selectbox(
@@ -1294,10 +1354,17 @@ with tab_banker_tracker:
             b_surfaces = df_banker_ledger["surface"].dropna().unique().tolist()
             sel_b_surf = st.multiselect("Filter Court Surface", options=b_surfaces, default=b_surfaces, key="sel_b_surf_tracker")
         with flt_col4:
-            view_mode = st.radio("Display View", options=["Compact Ledger Table", "Grouped Cards by Tournament"], horizontal=True)
+            view_mode = st.radio("Display View", options=["Total Day Spreadsheet (Master Table)", "Grouped Cards by Tournament"], horizontal=True)
 
         # Apply Filters
         filtered_bankers = df_banker_ledger.copy()
+        if search_filter:
+            sq = search_filter.strip().lower()
+            filtered_bankers = filtered_bankers[
+                filtered_bankers["match"].str.lower().str.contains(sq, na=False) |
+                filtered_bankers["tournament"].str.lower().str.contains(sq, na=False) |
+                filtered_bankers["banker_pick"].str.lower().str.contains(sq, na=False)
+            ]
         if sel_b_surf:
             filtered_bankers = filtered_bankers[filtered_bankers["surface"].isin(sel_b_surf)]
         if sel_tourney != "All Tournaments":
@@ -1312,27 +1379,44 @@ with tab_banker_tracker:
         elif banker_status_filter == "Scheduled / In-Play Only":
             filtered_bankers = filtered_bankers[filtered_bankers["settlement"].isin(["PENDING", "IN_PLAY"])]
 
-        st.markdown(f"#### Displaying **{len(filtered_bankers)}** Graded Banker Picks")
+        c_hdr1, c_hdr2 = st.columns([7, 3])
+        with c_hdr1:
+            st.markdown(f"#### Complete Slate: **{len(filtered_bankers)}** Matches with Optimal Best Picks")
+        with c_hdr2:
+            csv_export_df = filtered_bankers[[
+                "date", "tournament", "surface", "round", "match", "banker_pick", "market", "fair_odds", "win_prob_pct", "settlement", "actual_score", "profit_units"
+            ]].copy()
+            csv_export_df.columns = [
+                "Date", "Tournament", "Court", "Round", "Matchup", "Single Best Pick", "Market", "Odds", "Win Prob %", "Settlement Status", "Actual Score", "P&L (Units)"
+            ]
+            csv_bytes = csv_export_df.to_csv(index=False).encode('utf-8')
+            st.download_button(
+                label="📥 Export Full Slate Spreadsheet (CSV)",
+                data=csv_bytes,
+                file_name=f"tenpred_slate_{selected_date_val}.csv",
+                mime="text/csv",
+                use_container_width=True,
+            )
 
-        # 1. Compact Ledger Table View
-        if view_mode == "Compact Ledger Table":
+        # 1. Total Day Spreadsheet View (Master Table)
+        if view_mode == "Total Day Spreadsheet (Master Table)":
             table_display = filtered_bankers[[
-                "date", "tournament", "match", "banker_pick", "fair_odds", "win_prob_pct", "status_badge", "actual_score", "profit_units"
+                "date", "tournament", "surface", "round", "match", "banker_pick", "fair_odds", "win_prob_pct", "status_badge", "actual_score", "profit_units"
             ]].copy()
             table_display.columns = [
-                "Date", "Tournament", "Matchup", "Selected Banker Pick", "Odds", "Win Prob %", "Outcome Status", "Actual Score", "P&L (Units)"
+                "Date", "Tournament", "Court", "Round", "Matchup", "Single Best Pick", "Odds", "Win Prob %", "Outcome Status", "Actual Score", "P&L (Units)"
             ]
             st.dataframe(
                 table_display,
                 use_container_width=True,
                 hide_index=True,
-                height=min(600, 45 * len(table_display) + 40),
+                height=min(680, 45 * len(table_display) + 40),
             )
 
         # 2. Grouped Cards by Tournament View
         else:
             for tourney_name, grp in filtered_bankers.groupby("tournament"):
-                with st.expander(f"{tourney_name} ({len(grp)} Banker Picks)", expanded=True):
+                with st.expander(f"{tourney_name} ({len(grp)} Matches)", expanded=True):
                     for b_idx, b_row in grp.iterrows():
                         m_title = b_row["match"]
                         surf = b_row["surface"]
@@ -1372,7 +1456,7 @@ with tab_banker_tracker:
                             </div>
                             <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px;">
                                 <div style="flex: 1; min-width: 220px;">
-                                    <div style="display: inline-flex; align-items: center; gap: 4px; font-size: 0.72rem; color: #b45309; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">{get_icon('shield', 12, '#b45309')} Banker Pick</div>
+                                    <div style="display: inline-flex; align-items: center; gap: 4px; font-size: 0.72rem; color: #b45309; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">{get_icon('shield', 12, '#b45309')} Best Match Pick</div>
                                     <div style="font-size: 1.1rem; font-weight: 800; color: #059669;">{b_pick}</div>
                                     <div class="mono-num" style="font-size: 0.82rem; color: #475569;">
                                         Model: <b>{b_prob:.1f}%</b> | Odds: <b>@{b_odds:.2f}</b>
