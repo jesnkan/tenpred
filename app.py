@@ -23,6 +23,103 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
+def get_icon(name: str, size: int = 16, color: str = "currentColor", stroke_width: float = 2.0) -> str:
+    """Return crisp vector SVG icons styled after modern Lucide/Feather icon systems."""
+    svgs = {
+        "tennis": (
+            f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="{stroke_width}" stroke-linecap="round" stroke-linejoin="round">'
+            '<circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 10 10"/><path d="M12 22a10 10 0 0 1-10-10"/>'
+            '</svg>'
+        ),
+        "check": (
+            f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="{stroke_width + 0.5}" stroke-linecap="round" stroke-linejoin="round">'
+            '<polyline points="20 6 9 17 4 12"/>'
+            '</svg>'
+        ),
+        "cross": (
+            f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="{stroke_width + 0.5}" stroke-linecap="round" stroke-linejoin="round">'
+            '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>'
+            '</svg>'
+        ),
+        "void": (
+            f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="{stroke_width}" stroke-linecap="round" stroke-linejoin="round">'
+            '<circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>'
+            '</svg>'
+        ),
+        "clock": (
+            f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="{stroke_width}" stroke-linecap="round" stroke-linejoin="round">'
+            '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>'
+            '</svg>'
+        ),
+        "calendar": (
+            f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="{stroke_width}" stroke-linecap="round" stroke-linejoin="round">'
+            '<rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/>'
+            '</svg>'
+        ),
+        "shield": (
+            f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="{stroke_width}" stroke-linecap="round" stroke-linejoin="round">'
+            '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>'
+            '</svg>'
+        ),
+        "pulse": (
+            f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="{stroke_width}" stroke-linecap="round" stroke-linejoin="round">'
+            '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>'
+            '</svg>'
+        ),
+        "trending_up": (
+            f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="{stroke_width}" stroke-linecap="round" stroke-linejoin="round">'
+            '<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>'
+            '</svg>'
+        ),
+        "refresh": (
+            f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="{stroke_width}" stroke-linecap="round" stroke-linejoin="round">'
+            '<path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/>'
+            '</svg>'
+        ),
+        "plus": (
+            f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="{stroke_width + 0.5}" stroke-linecap="round" stroke-linejoin="round">'
+            '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>'
+            '</svg>'
+        ),
+        "trash": (
+            f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="{stroke_width}" stroke-linecap="round" stroke-linejoin="round">'
+            '<polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>'
+            '</svg>'
+        ),
+        "trophy": (
+            f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="{stroke_width}" stroke-linecap="round" stroke-linejoin="round">'
+            '<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2z"/>'
+            '</svg>'
+        ),
+        "layers": (
+            f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="{stroke_width}" stroke-linecap="round" stroke-linejoin="round">'
+            '<polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>'
+            '</svg>'
+        ),
+        "sliders": (
+            f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="{stroke_width}" stroke-linecap="round" stroke-linejoin="round">'
+            '<line x1="4" x2="4" y1="21" y2="14"/><line x1="4" x2="4" y1="10" y2="3"/><line x1="12" x2="12" y1="21" y2="12"/><line x1="12" x2="12" y1="8" y2="3"/><line x1="20" x2="20" y1="21" y2="16"/><line x1="20" x2="20" y1="12" y2="3"/><line x1="1" x2="7" y1="14" y2="14"/><line x1="9" x2="15" y1="8" y2="8"/><line x1="17" x2="23" y1="16" y2="16"/>'
+            '</svg>'
+        ),
+        "arrow_up_right": (
+            f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="{stroke_width}" stroke-linecap="round" stroke-linejoin="round">'
+            '<line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/>'
+            '</svg>'
+        ),
+        "target": (
+            f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="{stroke_width}" stroke-linecap="round" stroke-linejoin="round">'
+            '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>'
+            '</svg>'
+        ),
+        "wallet": (
+            f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="{stroke_width}" stroke-linecap="round" stroke-linejoin="round">'
+            '<path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/>'
+            '</svg>'
+        ),
+    }
+    return svgs.get(name, "")
+
+
 # Configure wide page layout and title
 st.set_page_config(
     page_title="tenpred • Tennis Match Intelligence & Predictions",
@@ -56,6 +153,8 @@ st.markdown("""
         background-color: #f8fafc !important;
         color: #0f172a !important;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
     }
 
     /* Force light backgrounds for containers and sidebars */
@@ -80,21 +179,24 @@ st.markdown("""
         border: 1px solid #e2e8f0;
         border-radius: 12px;
         padding: 18px 20px;
-        transition: box-shadow 0.15s ease, border-color 0.15s ease;
-        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+        transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+        box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.04), 0 1px 2px -1px rgba(15, 23, 42, 0.04);
     }
     .quant-card:hover {
         border-color: #cbd5e1;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.06), 0 2px 4px -2px rgba(15, 23, 42, 0.04);
     }
 
     .quant-label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
         font-size: 0.75rem;
         font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.6px;
+        letter-spacing: 0.04em;
         color: #64748b;
-        margin-bottom: 4px;
+        margin-bottom: 6px;
     }
 
     .quant-val {
@@ -104,6 +206,7 @@ st.markdown("""
         line-height: 1.1;
         margin-bottom: 4px;
         font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+        letter-spacing: -0.02em;
     }
 
     .quant-sub {
@@ -112,23 +215,24 @@ st.markdown("""
         font-weight: 500;
     }
 
-    /* Badge Pills */
+    /* Badge Pills with Icon Support */
     .badge-pill {
         display: inline-flex;
         align-items: center;
         gap: 5px;
         padding: 4px 10px;
         border-radius: 9999px;
-        font-size: 0.78rem;
-        font-weight: 700;
-        letter-spacing: 0.2px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        letter-spacing: 0.01em;
+        line-height: 1.2;
     }
     .badge-emerald {
         background: #ecfdf5;
         color: #047857;
         border: 1px solid #a7f3d0;
     }
-    .badge-blue, .badge-dark {
+    .badge-slate, .badge-blue, .badge-dark {
         background: #f1f5f9;
         color: #0f172a;
         border: 1px solid #cbd5e1;
@@ -143,32 +247,68 @@ st.markdown("""
         color: #be123c;
         border: 1px solid #fecdd3;
     }
-    .badge-slate {
-        background: #f1f5f9;
-        color: #475569;
-        border: 1px solid #cbd5e1;
+
+    /* Probability Distribution Meter Bar */
+    .prob-meter-container {
+        height: 6px;
+        width: 100%;
+        background-color: #f1f5f9;
+        border-radius: 9999px;
+        overflow: hidden;
+        display: flex;
+        margin: 8px 0;
+        border: 1px solid #e2e8f0;
+    }
+    .prob-meter-fill {
+        height: 100%;
+        background-color: #0f172a;
+        border-radius: 9999px;
+        transition: width 0.3s ease;
+    }
+
+    /* Odds Display Chip */
+    .odds-chip {
+        display: inline-flex;
+        align-items: center;
+        padding: 2px 8px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: #0f172a;
     }
 
     /* Buttons in sleek black and dark gray */
     button[kind="primary"] {
         background-color: #0f172a !important;
-        border-color: #0f172a !important;
+        border: 1px solid #0f172a !important;
         color: #ffffff !important;
         font-weight: 600 !important;
+        border-radius: 8px !important;
+        padding: 6px 14px !important;
+        transition: all 0.15s ease !important;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08) !important;
     }
     button[kind="primary"]:hover {
-        background-color: #334155 !important;
-        border-color: #334155 !important;
+        background-color: #1e293b !important;
+        border-color: #1e293b !important;
         color: #ffffff !important;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.1) !important;
     }
     button[kind="secondary"] {
         background-color: #ffffff !important;
-        border-color: #e2e8f0 !important;
+        border: 1px solid #e2e8f0 !important;
         color: #0f172a !important;
         font-weight: 600 !important;
+        border-radius: 8px !important;
+        padding: 6px 14px !important;
+        transition: all 0.15s ease !important;
     }
     button[kind="secondary"]:hover {
-        background-color: #f1f5f9 !important;
+        background-color: #f8fafc !important;
         border-color: #cbd5e1 !important;
         color: #0f172a !important;
     }
@@ -187,14 +327,18 @@ st.markdown("""
         border-radius: 8px;
         padding: 10px 12px;
         margin-bottom: 8px;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+        transition: border-color 0.15s ease;
+    }
+    .betslip-item:hover {
+        border-color: #cbd5e1;
     }
 
     /* Tabs Styling */
     .stTabs [data-baseweb="tab-list"] {
-        gap: 4px;
+        gap: 6px;
         background-color: #f1f5f9;
-        padding: 5px;
+        padding: 6px;
         border-radius: 10px;
         border: 1px solid #e2e8f0;
     }
@@ -203,15 +347,20 @@ st.markdown("""
         border-radius: 8px;
         color: #64748b;
         font-weight: 600;
-        font-size: 0.9rem;
+        font-size: 0.88rem;
         background-color: transparent !important;
         border: none !important;
+        transition: all 0.15s ease;
+    }
+    .stTabs [data-baseweb="tab"]:hover {
+        color: #0f172a;
+        background-color: rgba(255, 255, 255, 0.5) !important;
     }
     .stTabs [aria-selected="true"] {
         background-color: #ffffff !important;
         color: #0f172a !important;
         font-weight: 700 !important;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08) !important;
     }
 
     /* Streamlit widget tweaks for clean light look */
@@ -219,7 +368,7 @@ st.markdown("""
         background-color: #ffffff !important;
         border: 1px solid #e2e8f0 !important;
         border-radius: 10px !important;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.03) !important;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03) !important;
     }
     div[data-testid="stExpander"] details {
         border: none !important;
@@ -228,22 +377,31 @@ st.markdown("""
     /* Mobile Responsive Media Queries */
     @media (max-width: 768px) {
         .quant-val {
-            font-size: 1.5rem !important;
+            font-size: 1.45rem !important;
         }
         .quant-card {
-            padding: 12px 14px !important;
+            padding: 14px 16px !important;
             margin-bottom: 8px !important;
         }
         .stTabs [data-baseweb="tab"] {
             padding: 6px 10px !important;
-            font-size: 0.8rem !important;
+            font-size: 0.78rem !important;
         }
         .block-container {
             padding-left: 12px !important;
             padding-right: 12px !important;
+            padding-top: 2rem !important;
         }
         button[kind="primary"], button[kind="secondary"] {
-            min-height: 44px !important;
+            min-height: 42px !important;
+        }
+    }
+    @media (max-width: 480px) {
+        .quant-val {
+            font-size: 1.25rem !important;
+        }
+        .quant-card {
+            padding: 12px !important;
         }
     }
 </style>
@@ -292,22 +450,22 @@ def add_to_betslip(match: str, market: str, pick: str, odds: float, prob: float)
             "odds": float(odds),
             "prob": float(prob),
         })
-        st.toast(f"Added to Betslip: {pick} @ {odds:.2f}", icon="📋")
+        st.toast(f"Added to Betslip: {pick} @ {odds:.2f}")
     else:
-        st.toast(f"Already in Betslip: {pick}", icon="ℹ️")
+        st.toast(f"Already in Betslip: {pick}")
 
 
 def remove_from_betslip(idx: int) -> None:
     """Remove a single leg from the betslip."""
     if 0 <= idx < len(st.session_state["betslip"]):
         removed = st.session_state["betslip"].pop(idx)
-        st.toast(f"Removed: {removed['pick']}", icon="🗑️")
+        st.toast(f"Removed: {removed['pick']}")
 
 
 def clear_betslip() -> None:
     """Clear all legs from the betslip."""
     st.session_state["betslip"] = []
-    st.toast("Betslip cleared", icon="🧹")
+    st.toast("Betslip cleared")
 
 
 # =============================================================================
@@ -373,18 +531,20 @@ else:
 # =============================================================================
 
 with st.sidebar:
-    st.markdown("""
-    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #e2e8f0;">
-        <span style="font-size: 1.7rem;">🎾</span>
+    st.markdown(f"""
+    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid #e2e8f0;">
+        <div style="background: #0f172a; width: 36px; height: 36px; border-radius: 9px; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(15,23,42,0.12);">
+            {get_icon('tennis', 20, '#ffffff')}
+        </div>
         <div>
-            <div style="font-weight: 800; font-size: 1.2rem; color: #0f172a; letter-spacing: -0.4px;">TenPred</div>
-            <div style="font-size: 0.75rem; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">ATP & WTA Analytics</div>
+            <div style="font-weight: 800; font-size: 1.25rem; color: #0f172a; letter-spacing: -0.4px; line-height: 1.1;">tenpred</div>
+            <div style="font-size: 0.72rem; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px;">ATP & WTA Analytics</div>
         </div>
     </div>
     <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px;">
-        <span class="badge-pill badge-dark">ATP Tour</span>
-        <span class="badge-pill badge-emerald">WTA Tour</span>
-        <span class="badge-pill badge-slate">Live Settlement</span>
+        <span class="badge-pill badge-dark">{get_icon('trophy', 12, '#0f172a')} ATP Tour</span>
+        <span class="badge-pill badge-emerald">{get_icon('trophy', 12, '#047857')} WTA Tour</span>
+        <span class="badge-pill badge-slate">{get_icon('check', 12, '#334155')} Live Feed</span>
     </div>
     """, unsafe_allow_html=True)
 
@@ -396,17 +556,20 @@ with st.sidebar:
     n_legs = len(betslip)
 
     st.markdown(f"""
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-        <span style="font-weight: 700; font-size: 0.95rem; color: #0f172a;">Active Betslip</span>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <span style="font-weight: 700; font-size: 0.95rem; color: #0f172a; display: inline-flex; align-items: center; gap: 6px;">
+            {get_icon('wallet', 16, '#0f172a')} Active Betslip
+        </span>
         <span class="badge-pill {'badge-emerald' if n_legs > 0 else 'badge-slate'}">{n_legs} Leg{'s' if n_legs != 1 else ''}</span>
     </div>
     """, unsafe_allow_html=True)
 
     if n_legs == 0:
-        st.markdown("""
-        <div style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 14px; text-align: center; color: #64748b; font-size: 0.85rem;">
-            Your betslip is empty.<br>
-            Click <b style="color: #0f172a;">+ Add to Slip</b> on any match pick to build single or multi-leg wagers.
+        st.markdown(f"""
+        <div style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 18px 12px; text-align: center; color: #64748b; font-size: 0.85rem;">
+            <div style="margin-bottom: 8px; display: flex; justify-content: center;">{get_icon('layers', 24, '#94a3b8')}</div>
+            <div style="font-weight: 700; color: #334155; margin-bottom: 4px;">Betslip is empty</div>
+            <span style="font-size: 0.8rem; color: #64748b;">Click <b style="color: #0f172a;">+ Add to Slip</b> on any match pick to build single or parlay wagers.</span>
         </div>
         """, unsafe_allow_html=True)
     else:
@@ -429,7 +592,7 @@ with st.sidebar:
             </div>
             """, unsafe_allow_html=True)
 
-            if st.button("✕ Remove", key=f"del_leg_{idx}", use_container_width=True):
+            if st.button("Remove Leg", key=f"del_leg_{idx}", use_container_width=True):
                 remove_from_betslip(idx)
                 st.rerun()
 
@@ -443,7 +606,7 @@ with st.sidebar:
 
         st.markdown(f"""
         <div class="betslip-box">
-            <div style="font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase;">
+            <div style="font-size: 0.72rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">
                 {'Single Wager' if n_legs == 1 else f'{n_legs}-Leg Parlay Summary'}
             </div>
             <div style="display: flex; justify-content: space-between; align-items: baseline; margin: 4px 0;">
@@ -461,8 +624,36 @@ with st.sidebar:
         </div>
         """, unsafe_allow_html=True)
 
+        # Quick-Stake Selection Chips
+        if "wager_stake" not in st.session_state:
+            st.session_state["wager_stake"] = 50.0
+
+        st.markdown("<div style='font-size: 0.78rem; font-weight: 600; color: #64748b; margin: 8px 0 4px 0;'>Quick Stake</div>", unsafe_allow_html=True)
+        q1, q2, q3, q4 = st.columns(4)
+        if q1.button("$10", key="qs_10", use_container_width=True):
+            st.session_state["wager_stake"] = 10.0
+            st.rerun()
+        if q2.button("$25", key="qs_25", use_container_width=True):
+            st.session_state["wager_stake"] = 25.0
+            st.rerun()
+        if q3.button("$50", key="qs_50", use_container_width=True):
+            st.session_state["wager_stake"] = 50.0
+            st.rerun()
+        if q4.button("$100", key="qs_100", use_container_width=True):
+            st.session_state["wager_stake"] = 100.0
+            st.rerun()
+
         # Interactive Wager Calculator
-        wager_amount = st.number_input("Wager Stake ($)", min_value=1.0, max_value=50000.0, value=50.0, step=10.0)
+        wager_amount = st.number_input(
+            "Wager Stake ($)",
+            min_value=1.0,
+            max_value=50000.0,
+            value=float(st.session_state["wager_stake"]),
+            step=10.0,
+            key="wager_input_box"
+        )
+        st.session_state["wager_stake"] = wager_amount
+
         potential_payout = wager_amount * total_odds
         net_profit = potential_payout - wager_amount
 
@@ -487,7 +678,11 @@ with st.sidebar:
     # Bankroll Management Settings
     # -------------------------------------------------------------------------
     st.markdown("---")
-    st.markdown("<span style='font-weight: 700; font-size: 0.95rem; color: #0f172a;'>Bankroll & Stake Settings</span>", unsafe_allow_html=True)
+    st.markdown(f"""
+    <span style='font-weight: 700; font-size: 0.95rem; color: #0f172a; display: inline-flex; align-items: center; gap: 6px;'>
+        {get_icon('sliders', 16, '#0f172a')} Bankroll & Stake Settings
+    </span>
+    """, unsafe_allow_html=True)
     user_bankroll = st.number_input("Total Bankroll ($)", min_value=100.0, value=10000.0, step=500.0)
     user_kelly = st.slider("Kelly Fraction", min_value=0.10, max_value=0.50, value=0.25, step=0.05,
                            help="0.25 = Quarter Kelly (recommended for variance damping)")
@@ -511,20 +706,25 @@ with st.sidebar:
 # Main Header
 # =============================================================================
 
-st.markdown("""
-<div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 16px; margin-bottom: 20px; border-bottom: 1px solid #e2e8f0;">
+st.markdown(f"""
+<div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 16px; margin-bottom: 20px; border-bottom: 1px solid #e2e8f0; flex-wrap: wrap; gap: 12px;">
     <div>
-        <div style="display: flex; align-items: center; gap: 10px;">
-            <span style="font-size: 1.8rem;">🎾</span>
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="background: #0f172a; width: 38px; height: 38px; border-radius: 9px; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(15,23,42,0.15);">
+                {get_icon('tennis', 22, '#ffffff')}
+            </div>
             <span style="font-size: 1.85rem; font-weight: 800; letter-spacing: -0.6px; color: #0f172a;">tenpred</span>
-            <span style="background: #f1f5f9; color: #0f172a; font-weight: 700; font-size: 0.78rem; padding: 3px 8px; border-radius: 6px; border: 1px solid #cbd5e1;">ATP & WTA MATCH INTELLIGENCE</span>
+            <span style="background: #f1f5f9; color: #0f172a; font-weight: 700; font-size: 0.78rem; padding: 4px 10px; border-radius: 6px; border: 1px solid #cbd5e1; letter-spacing: 0.4px;">ATP & WTA MATCH INTELLIGENCE</span>
         </div>
-        <p style="color: #64748b; font-size: 0.92rem; margin: 4px 0 0 0;">
+        <p style="color: #64748b; font-size: 0.92rem; margin: 6px 0 0 0;">
             Institutional tennis analytics, consensus market odds, and real-time score settlement.
         </p>
     </div>
     <div style="text-align: right; display: flex; align-items: center; gap: 8px;">
-        <span class="badge-pill badge-emerald">● Live ESPN Feed</span>
+        <span class="badge-pill badge-emerald" style="display: inline-flex; align-items: center; gap: 6px;">
+            <span style="display: inline-block; width: 8px; height: 8px; background: #059669; border-radius: 50%; box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.2);"></span>
+            Live ESPN Feed
+        </span>
     </div>
 </div>
 """, unsafe_allow_html=True)
@@ -738,48 +938,68 @@ with tab_today:
                     if not m_time_val or m_time_val == "nan":
                         m_time_val = m_res.get("match_time", "")
                     if st_name == "FINAL":
-                        card_status_badge = f'<span class="badge-pill badge-emerald">FINAL • {sc_str} ({wn_str} won)</span>'
+                        card_status_badge = f'<span class="badge-pill badge-emerald">{get_icon("check", 12, "#047857")} FINAL • {sc_str} ({wn_str} won)</span>'
                     elif st_name == "WALKOVER":
-                        card_status_badge = f'<span class="badge-pill badge-slate">WALKOVER (W/O) • {wn_str} adv</span>'
+                        card_status_badge = f'<span class="badge-pill badge-slate">{get_icon("void", 12, "#475569")} WALKOVER (W/O) • {wn_str} adv</span>'
                     elif st_name == "RETIRED":
-                        card_status_badge = f'<span class="badge-pill badge-amber">RETIRED ({sc_str}) • {wn_str} won</span>'
+                        card_status_badge = f'<span class="badge-pill badge-amber">{get_icon("clock", 12, "#b45309")} RETIRED ({sc_str}) • {wn_str} won</span>'
                     elif st_name == "IN_PROGRESS":
-                        card_status_badge = f'<span class="badge-pill badge-amber">LIVE ON COURT • {sc_str}</span>'
+                        card_status_badge = f'<span class="badge-pill badge-amber">{get_icon("pulse", 12, "#b45309")} LIVE ON COURT • {sc_str}</span>'
                     else:
-                        card_status_badge = '<span class="badge-pill badge-slate">SCHEDULED • Upcoming</span>'
+                        card_status_badge = f'<span class="badge-pill badge-slate">{get_icon("clock", 12, "#475569")} SCHEDULED • Upcoming</span>'
                 else:
-                    card_status_badge = '<span class="badge-pill badge-slate">SCHEDULED • Upcoming</span>'
+                    card_status_badge = f'<span class="badge-pill badge-slate">{get_icon("clock", 12, "#475569")} SCHEDULED • Upcoming</span>'
 
                 if not m_time_val or m_time_val == "nan":
                     m_time_val = "Scheduled"
 
                 # Extract top 3 simple picks for this match
                 top_picks = TennisPredictionPipeline.extract_top_three_picks(row)
+                p1_pct = p1_prob * 100.0
+                p2_pct = p2_prob * 100.0
 
                 # Match Card Container
                 st.markdown(f"""
                 <div class="quant-card" style="margin-bottom: 16px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px;">
-                        <div>
-                            <span style="font-weight: 700; color: #0f172a; font-size: 1.05rem;">{tourney}</span>
-                            <span style="color: #64748b; font-size: 0.85rem; margin-left: 8px;">• {surf} Court • {rnd}</span>
-                            <span style="color: #334155; font-size: 0.82rem; margin-left: 12px; font-weight: 600; background: #f1f5f9; padding: 3px 8px; border-radius: 6px; border: 1px solid #e2e8f0;">{m_date_val} • {m_time_val}</span>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+                        <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
+                            <span style="display: inline-flex; align-items: center; gap: 6px; font-weight: 700; color: #0f172a; font-size: 1.05rem;">
+                                {get_icon('trophy', 16, '#475569')} {tourney}
+                            </span>
+                            <span style="color: #64748b; font-size: 0.85rem;">• {surf} Court • {rnd}</span>
+                            <span style="display: inline-flex; align-items: center; gap: 5px; color: #334155; font-size: 0.82rem; font-weight: 600; background: #f8fafc; padding: 3px 9px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                                {get_icon('calendar', 13, '#64748b')} {m_date_val} • {m_time_val}
+                            </span>
                         </div>
                         <div>{card_status_badge}</div>
                     </div>
-                    <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px;">
-                        <div style="flex: 1; min-width: 220px;">
-                            <div style="font-size: 1.12rem; font-weight: {'800' if p1_prob >= 0.5 else '600'}; color: {'#0f172a' if p1_prob >= 0.5 else '#475569'};">
-                                {p1} <span class="mono-num" style="font-size: 0.9rem; font-weight: 700; color: #0f172a;">@{p1_odds:.2f}</span> <span style="font-size: 0.82rem; color: #64748b;">({p1_prob:.1%})</span>
+                    <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px;">
+                        <div style="flex: 1; min-width: 260px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                <span style="font-size: 1.05rem; font-weight: {'800' if p1_prob >= 0.5 else '600'}; color: {'#0f172a' if p1_prob >= 0.5 else '#475569'};">
+                                    {p1}
+                                </span>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <span class="odds-chip">@{p1_odds:.2f}</span>
+                                    <span class="mono-num" style="font-size: 0.88rem; font-weight: 700; color: {'#0f172a' if p1_prob >= 0.5 else '#64748b'}; width: 46px; text-align: right;">{p1_pct:.1f}%</span>
+                                </div>
                             </div>
-                            <div style="font-size: 0.8rem; font-weight: 600; color: #94a3b8; margin: 2px 0;">vs</div>
-                            <div style="font-size: 1.12rem; font-weight: {'800' if p2_prob > 0.5 else '600'}; color: {'#0f172a' if p2_prob > 0.5 else '#475569'};">
-                                {p2} <span class="mono-num" style="font-size: 0.9rem; font-weight: 700; color: #0f172a;">@{p2_odds:.2f}</span> <span style="font-size: 0.82rem; color: #64748b;">({p2_prob:.1%})</span>
+                            <div class="prob-meter-container">
+                                <div class="prob-meter-fill" style="width: {p1_pct:.1f}%;"></div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+                                <span style="font-size: 1.05rem; font-weight: {'800' if p2_prob > 0.5 else '600'}; color: {'#0f172a' if p2_prob > 0.5 else '#475569'};">
+                                    {p2}
+                                </span>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <span class="odds-chip">@{p2_odds:.2f}</span>
+                                    <span class="mono-num" style="font-size: 0.88rem; font-weight: 700; color: {'#0f172a' if p2_prob > 0.5 else '#64748b'}; width: 46px; text-align: right;">{p2_pct:.1f}%</span>
+                                </div>
                             </div>
                         </div>
-                        <div style="text-align: right; min-width: 160px;">
-                            <div style="font-size: 0.75rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Projected Winner</div>
-                            <div style="font-size: 1.25rem; font-weight: 800; color: #059669;">{pred_winner}</div>
+                        <div style="text-align: right; min-width: 170px; padding-left: 16px; border-left: 1px solid #f1f5f9;">
+                            <div style="font-size: 0.72rem; color: #64748b; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Projected Winner</div>
+                            <div style="font-size: 1.25rem; font-weight: 800; color: #059669; margin: 2px 0;">{pred_winner}</div>
                             <div style="font-size: 0.82rem; color: #475569; font-weight: 600;">{win_prob_pct:.1f}% probability</div>
                         </div>
                     </div>
@@ -790,7 +1010,9 @@ with tab_today:
                 if top_picks:
                     p_cols = st.columns(3)
                     badges_titles = ["Banker Pick", "Spread Pick", "Value Edge"]
-                    badge_styles = ["badge-emerald", "badge-slate", "badge-amber"]
+                    badge_styles = ["badge-emerald", "badge-dark", "badge-amber"]
+                    pick_icons = ["shield", "layers", "arrow_up_right"]
+                    pick_icon_colors = ["#047857", "#0f172a", "#b45309"]
 
                 for p_idx, pick in enumerate(top_picks):
                     with p_cols[p_idx]:
@@ -800,23 +1022,23 @@ with tab_today:
 
                         if settle == "WON":
                             box_style = "background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 12px 14px; margin-bottom: 8px;"
-                            badge_markup = f'<span class="badge-pill badge-emerald">{badge_txt}</span>'
-                            action_markup = '<div style="background: #dcfce7; color: #15803d; font-weight: 800; font-size: 0.82rem; text-align: center; padding: 6px; border-radius: 6px; border: 1px solid #86efac;">WON</div>'
+                            badge_markup = f'<span class="badge-pill badge-emerald">{get_icon("check", 12, "#047857")} {badge_txt}</span>'
+                            action_markup = f'<div style="display: flex; align-items: center; justify-content: center; gap: 6px; background: #dcfce7; color: #15803d; font-weight: 800; font-size: 0.82rem; text-align: center; padding: 7px; border-radius: 6px; border: 1px solid #86efac;">{get_icon("check", 14, "#15803d")} WON</div>'
                         elif settle == "FAILED":
                             box_style = "background: #fff1f2; border: 1px solid #fecdd3; border-radius: 8px; padding: 12px 14px; margin-bottom: 8px;"
-                            badge_markup = f'<span class="badge-pill badge-rose">{badge_txt}</span>'
-                            action_markup = '<div style="background: #ffe4e6; color: #be123c; font-weight: 800; font-size: 0.82rem; text-align: center; padding: 6px; border-radius: 6px; border: 1px solid #fda4af;">LOST</div>'
+                            badge_markup = f'<span class="badge-pill badge-rose">{get_icon("cross", 12, "#be123c")} {badge_txt}</span>'
+                            action_markup = f'<div style="display: flex; align-items: center; justify-content: center; gap: 6px; background: #ffe4e6; color: #be123c; font-weight: 800; font-size: 0.82rem; text-align: center; padding: 7px; border-radius: 6px; border: 1px solid #fda4af;">{get_icon("cross", 14, "#be123c")} LOST</div>'
                         elif settle == "VOID":
                             box_style = "background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px 14px; margin-bottom: 8px;"
-                            badge_markup = f'<span class="badge-pill badge-slate">{badge_txt}</span>'
-                            action_markup = '<div style="background: #f1f5f9; color: #475569; font-weight: 800; font-size: 0.82rem; text-align: center; padding: 6px; border-radius: 6px; border: 1px solid #cbd5e1;">VOIDED</div>'
+                            badge_markup = f'<span class="badge-pill badge-slate">{get_icon("void", 12, "#475569")} {badge_txt}</span>'
+                            action_markup = f'<div style="display: flex; align-items: center; justify-content: center; gap: 6px; background: #f1f5f9; color: #475569; font-weight: 800; font-size: 0.82rem; text-align: center; padding: 7px; border-radius: 6px; border: 1px solid #cbd5e1;">{get_icon("void", 14, "#475569")} VOIDED</div>'
                         elif settle == "IN_PLAY":
                             box_style = "background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 12px 14px; margin-bottom: 8px;"
-                            badge_markup = f'<span class="badge-pill badge-amber">{badge_txt}</span>'
-                            action_markup = '<div style="background: #fef3c7; color: #b45309; font-weight: 800; font-size: 0.82rem; text-align: center; padding: 6px; border-radius: 6px; border: 1px solid #fcd34d;">IN PLAY</div>'
+                            badge_markup = f'<span class="badge-pill badge-amber">{get_icon("pulse", 12, "#b45309")} {badge_txt}</span>'
+                            action_markup = f'<div style="display: flex; align-items: center; justify-content: center; gap: 6px; background: #fef3c7; color: #b45309; font-weight: 800; font-size: 0.82rem; text-align: center; padding: 7px; border-radius: 6px; border: 1px solid #fcd34d;">{get_icon("pulse", 14, "#b45309")} IN PLAY</div>'
                         else:
                             box_style = "background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px; margin-bottom: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);"
-                            badge_markup = f'<span class="badge-pill {badge_styles[p_idx]}">{badges_titles[p_idx]}</span>'
+                            badge_markup = f'<span class="badge-pill {badge_styles[p_idx]}">{get_icon(pick_icons[p_idx], 12, pick_icon_colors[p_idx])} {badges_titles[p_idx]}</span>'
                             action_markup = None
 
                         st.markdown(f"""
@@ -924,7 +1146,9 @@ with tab_banker_tracker:
         with k_col1:
             st.markdown(f"""
             <div class="quant-card">
-                <div class="quant-label">Total Banker Picks</div>
+                <div class="quant-label" style="display: flex; align-items: center; gap: 6px;">
+                    {get_icon('layers', 14, '#64748b')} Total Banker Picks
+                </div>
                 <div class="quant-val">{total_p}</div>
                 <div class="quant-sub">{chosen_date_label}</div>
             </div>
@@ -933,7 +1157,9 @@ with tab_banker_tracker:
         with k_col2:
             st.markdown(f"""
             <div class="quant-card">
-                <div class="quant-label">Won (Cashed)</div>
+                <div class="quant-label" style="display: flex; align-items: center; gap: 6px;">
+                    {get_icon('check', 14, '#059669')} Won (Cashed)
+                </div>
                 <div class="quant-val" style="color: #059669;">{won_p}</div>
                 <div class="quant-sub">Successful Picks</div>
             </div>
@@ -942,7 +1168,9 @@ with tab_banker_tracker:
         with k_col3:
             st.markdown(f"""
             <div class="quant-card">
-                <div class="quant-label">Failed (Lost)</div>
+                <div class="quant-label" style="display: flex; align-items: center; gap: 6px;">
+                    {get_icon('cross', 14, '#e11d48')} Failed (Lost)
+                </div>
                 <div class="quant-val" style="color: #e11d48;">{failed_p}</div>
                 <div class="quant-sub">Failed Picks</div>
             </div>
@@ -951,7 +1179,9 @@ with tab_banker_tracker:
         with k_col4:
             st.markdown(f"""
             <div class="quant-card">
-                <div class="quant-label">Voided</div>
+                <div class="quant-label" style="display: flex; align-items: center; gap: 6px;">
+                    {get_icon('void', 14, '#64748b')} Voided
+                </div>
                 <div class="quant-val" style="color: #64748b;">{void_p}</div>
                 <div class="quant-sub">Walkovers & Ret.</div>
             </div>
@@ -960,7 +1190,9 @@ with tab_banker_tracker:
         with k_col5:
             st.markdown(f"""
             <div class="quant-card">
-                <div class="quant-label">Scheduled / In-Play</div>
+                <div class="quant-label" style="display: flex; align-items: center; gap: 6px;">
+                    {get_icon('clock', 14, '#334155')} Scheduled / In-Play
+                </div>
                 <div class="quant-val" style="color: #334155;">{pending_p}</div>
                 <div class="quant-sub">Awaiting Outcomes</div>
             </div>
@@ -970,7 +1202,9 @@ with tab_banker_tracker:
             net_color = "#059669" if net_units >= 0 else "#e11d48"
             st.markdown(f"""
             <div class="quant-card">
-                <div class="quant-label">Strike Rate & P&L</div>
+                <div class="quant-label" style="display: flex; align-items: center; gap: 6px;">
+                    {get_icon('trending_up', 14, net_color)} Strike Rate & P&L
+                </div>
                 <div class="quant-val" style="color: {net_color};">{strike_rate:.1f}%</div>
                 <div class="quant-sub">Net: {net_units:+.2f} Units</div>
             </div>
@@ -1113,19 +1347,19 @@ with tab_banker_tracker:
 
                         if settle == "WON":
                             border_style = "border: 1px solid #bbf7d0; background: #f0fdf4;"
-                            badge_html = f'<span class="badge-pill badge-emerald">{badge}</span>'
+                            badge_html = f'<span class="badge-pill badge-emerald">{get_icon("check", 12, "#047857")} {badge}</span>'
                         elif settle == "FAILED":
                             border_style = "border: 1px solid #fecdd3; background: #fff1f2;"
-                            badge_html = f'<span class="badge-pill badge-rose">{badge}</span>'
+                            badge_html = f'<span class="badge-pill badge-rose">{get_icon("cross", 12, "#be123c")} {badge}</span>'
                         elif settle == "VOID":
                             border_style = "border: 1px solid #e2e8f0; background: #f8fafc;"
-                            badge_html = f'<span class="badge-pill badge-slate">{badge}</span>'
+                            badge_html = f'<span class="badge-pill badge-slate">{get_icon("void", 12, "#475569")} {badge}</span>'
                         elif settle == "IN_PLAY":
                             border_style = "border: 1px solid #fef3c7; background: #fffbeb;"
-                            badge_html = f'<span class="badge-pill badge-amber">{badge}</span>'
+                            badge_html = f'<span class="badge-pill badge-amber">{get_icon("pulse", 12, "#b45309")} {badge}</span>'
                         else:
                             border_style = "border: 1px solid #e2e8f0; background: #ffffff;"
-                            badge_html = '<span class="badge-pill badge-slate">Scheduled</span>'
+                            badge_html = f'<span class="badge-pill badge-slate">{get_icon("clock", 12, "#475569")} Scheduled</span>'
 
                         st.markdown(f"""
                         <div class="quant-card" style="{border_style} margin-bottom: 10px; padding: 14px 18px;">
@@ -1138,7 +1372,7 @@ with tab_banker_tracker:
                             </div>
                             <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px;">
                                 <div style="flex: 1; min-width: 220px;">
-                                    <div style="font-size: 0.75rem; color: #b45309; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">Banker Pick</div>
+                                    <div style="display: inline-flex; align-items: center; gap: 4px; font-size: 0.72rem; color: #b45309; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">{get_icon('shield', 12, '#b45309')} Banker Pick</div>
                                     <div style="font-size: 1.1rem; font-weight: 800; color: #059669;">{b_pick}</div>
                                     <div class="mono-num" style="font-size: 0.82rem; color: #475569;">
                                         Model: <b>{b_prob:.1f}%</b> | Odds: <b>@{b_odds:.2f}</b>
@@ -1278,7 +1512,9 @@ with tab_sim:
             with kpi_c1:
                 st.markdown(f"""
                 <div class="quant-card">
-                    <div class="quant-label">Predicted Winner</div>
+                    <div class="quant-label" style="display: flex; align-items: center; gap: 6px;">
+                        {get_icon('trophy', 14, '#0f172a')} Predicted Winner
+                    </div>
                     <div class="quant-val" style="color: #0f172a;">{pred['predicted_winner']}</div>
                     <div class="quant-sub">Win Probability: {max(p1_prob, p2_prob):.1%}</div>
                 </div>
@@ -1289,7 +1525,9 @@ with tab_sim:
                 edge_color = "#059669" if edge_val > 0 else "#64748b"
                 st.markdown(f"""
                 <div class="quant-card">
-                    <div class="quant-label">Market Edge</div>
+                    <div class="quant-label" style="display: flex; align-items: center; gap: 6px;">
+                        {get_icon('arrow_up_right', 14, edge_color)} Market Edge
+                    </div>
                     <div class="quant-val" style="color: {edge_color};">{edge_val:+.1f}%</div>
                     <div class="quant-sub">Target: {pred.get('recommended_bet', 'Pass')}</div>
                 </div>
@@ -1298,7 +1536,9 @@ with tab_sim:
             with kpi_c3:
                 st.markdown(f"""
                 <div class="quant-card">
-                    <div class="quant-label">Kelly Allocation</div>
+                    <div class="quant-label" style="display: flex; align-items: center; gap: 6px;">
+                        {get_icon('wallet', 14, '#b45309')} Kelly Allocation
+                    </div>
                     <div class="quant-val" style="color: #b45309;">{pred.get('kelly_stake_pct', '0.0%')}</div>
                     <div class="quant-sub">Bankroll: ${user_bankroll:,.0f}</div>
                 </div>
@@ -1307,21 +1547,25 @@ with tab_sim:
             with kpi_c4:
                 st.markdown(f"""
                 <div class="quant-card">
-                    <div class="quant-label">Expected Total Games</div>
-                    <div class="quant-val" style="color: #7c3aed;">{pred['pred_total_games']:.1f}</div>
+                    <div class="quant-label" style="display: flex; align-items: center; gap: 6px;">
+                        {get_icon('target', 14, '#0f172a')} Expected Total Games
+                    </div>
+                    <div class="quant-val" style="color: #0f172a;">{pred['pred_total_games']:.1f}</div>
                     <div class="quant-sub">Speed Index: {'Fast (Indoor)' if is_indoor else 'Standard'}</div>
                 </div>
                 """, unsafe_allow_html=True)
 
             # Executive Summary: Top 3 Simple Pick Recommendations
             st.markdown("---")
-            st.markdown("""
+            st.markdown(f"""
             <div style="background: #ffffff; padding: 18px 22px; border-radius: 10px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 16px;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <span style="font-weight: 700; color: #0f172a; font-size: 1.15rem;">Top 3 Match Selections</span>
+                    <span style="font-weight: 700; color: #0f172a; font-size: 1.15rem; display: inline-flex; align-items: center; gap: 8px;">
+                        {get_icon('target', 18, '#0f172a')} Top 3 Match Selections
+                    </span>
                     <span class="badge-pill badge-emerald">Ranked by Confidence</span>
                 </div>
-                <p style="margin: 4px 0 0 0; color: #64748b; font-size: 0.85rem;">
+                <p style="margin: 6px 0 0 0; color: #64748b; font-size: 0.85rem;">
                     Derived directly from calibrated probability distributions across match winner, set handicap, and game lines.
                 </p>
             </div>
@@ -1331,14 +1575,18 @@ with tab_sim:
             if top_sim_picks:
                 sim_p_cols = st.columns(3)
                 badges_sim = ["Banker Pick", "Spread Pick", "Value Edge"]
-                badge_sim_styles = ["badge-emerald", "badge-slate", "badge-amber"]
+                badge_sim_styles = ["badge-emerald", "badge-dark", "badge-amber"]
+                sim_icons = ["shield", "layers", "arrow_up_right"]
+                sim_icon_colors = ["#047857", "#0f172a", "#b45309"]
 
                 for s_i, sp in enumerate(top_sim_picks):
                     with sim_p_cols[s_i]:
                         st.markdown(f"""
                         <div class="quant-card" style="height: 100%;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                                <span class="badge-pill {badge_sim_styles[s_i]}">{badges_sim[s_i]}</span>
+                                <span class="badge-pill {badge_sim_styles[s_i]}">
+                                    {get_icon(sim_icons[s_i], 12, sim_icon_colors[s_i])} {badges_sim[s_i]}
+                                </span>
                                 <span class="mono-num" style="font-weight: 700; color: #059669;">@{sp['fair_odds']:.2f}</span>
                             </div>
                             <div style="font-size: 1.1rem; font-weight: 700; color: #0f172a; margin-bottom: 4px;">{sp['title']}</div>
@@ -1351,7 +1599,7 @@ with tab_sim:
                         </div>
                         """, unsafe_allow_html=True)
 
-                        if st.button("Add to Betslip", key=f"btn_add_sim_{s_i}", use_container_width=True):
+                        if st.button("+ Add to Betslip", key=f"btn_add_sim_{s_i}", use_container_width=True):
                             add_to_betslip(
                                 match=f"{player1} vs {player2}",
                                 market=sp["market"],
